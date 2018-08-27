@@ -31,17 +31,17 @@ clean:
 # You need to put $GOBIN (or $GOPATH/bin) in your PATH to use 'go generate'.
 
 devtools:
-    env GOBIN= go get -u github.com/x-cray/logrus-prefixed-formatter
-    env GOBIN= go get -u  github.com/multiformats/go-multiaddr
-    env GOBIN= go get -u  github.com/urfave/cli
-    env GOBIN= go get -u google.golang.org/grpc
-    env GOBIN= go get -u golang.org/x/crypto/blake2b
-    env GOBIN= go get -u github.com/libp2p/go-libp2p/
-    env GOBIN= go get -u github.com/fjl/memsize/memsizeui
-    env GOBIN= go get -u github.com/libp2p/go-floodsub
-    env GOBIN= go get -u github.com/whyrusleeping/mdns
-    env GOBIN= go get -u github.com/syndtr/goleveldb/leveldb
-    env GOBIN= go get -u -u github.com/golang/protobuf/proto
+	env GOBIN= go get -u github.com/x-cray/logrus-prefixed-formatter
+	env GOBIN= go get -u  github.com/multiformats/go-multiaddr
+	env GOBIN= go get -u  github.com/urfave/cli
+	env GOBIN= go get -u google.golang.org/grpc
+	env GOBIN= go get -u golang.org/x/crypto/blake2b
+	env GOBIN= go get -u github.com/libp2p/go-libp2p/
+	env GOBIN= go get -u github.com/fjl/memsize/memsizeui
+	env GOBIN= go get -u github.com/libp2p/go-floodsub
+	env GOBIN= go get -u github.com/whyrusleeping/mdns
+	env GOBIN= go get -u github.com/syndtr/goleveldb/leveldb
+	env GOBIN= go get -u -u github.com/golang/protobuf/proto
 
 
 # Cross Compilation Targets (xgo)

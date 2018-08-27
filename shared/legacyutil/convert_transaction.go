@@ -5,9 +5,9 @@ package legacyutil
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	pb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
+	pb "github.com/ovcharovvladimir/Prysm/proto/sharding/p2p/v1"
+	"github.com/ovcharovvladimir/essentiaHybrid/common"
+	gethTypes "github.com/ovcharovvladimir/essentiaHybrid/core/types"
 )
 
 // TransformTransaction of proto transaction to geth's transction.

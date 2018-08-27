@@ -8,12 +8,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rpc"
-	contracts "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract"
+	contracts "github.com/ovcharovvladimir/Prysm/contracts/validator-registration-contract"
+	"github.com/ovcharovvladimir/essentiaHybrid/accounts/abi/bind"
+	"github.com/ovcharovvladimir/essentiaHybrid/accounts/keystore"
+	"github.com/ovcharovvladimir/essentiaHybrid/crypto"
+	"github.com/ovcharovvladimir/essentiaHybrid/essclient"
+	"github.com/ovcharovvladimir/essentiaHybrid/rpc"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -81,7 +81,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		client := ethclient.NewClient(rpcClient)
+		client := essclient.NewClient(rpcClient)
 
 		// User inputs private key, sign tx with private key
 		if privKeyString != "" {

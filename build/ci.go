@@ -89,13 +89,11 @@ var (
 		},
 	}
 
-
 	debEthereum = debPackage{
 		Name:        "essentiaPrysm",
 		Version:     params.Version,
 		Executables: debExecutables,
 	}
-
 
 	// Debian meta packages to build and push to Ubuntu PPA
 	debPackages = []debPackage{

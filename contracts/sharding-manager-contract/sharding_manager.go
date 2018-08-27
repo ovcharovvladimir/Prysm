@@ -7,12 +7,12 @@ import (
 	"math/big"
 	"strings"
 
-	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
+	ethereum "github.com/ovcharovvladimir/essentiaHybrid"
+	"github.com/ovcharovvladimir/essentiaHybrid/accounts/abi"
+	"github.com/ovcharovvladimir/essentiaHybrid/accounts/abi/bind"
+	"github.com/ovcharovvladimir/essentiaHybrid/common"
+	"github.com/ovcharovvladimir/essentiaHybrid/core/types"
+	"github.com/ovcharovvladimir/essentiaHybrid/event"
 )
 
 // SMCABI is the input ABI used to generate the binding from.

@@ -9,9 +9,12 @@ fi
 
 # Create fake Go workspace if it doesn't exist yet.
 workspace="$PWD/build/_workspace"
-gopath= "$GOPATH"
+solution="${PWD%/go/src/*}/go/src/github.com/ovcharovvladimir"
+#"$GOPATH"
 root="$PWD"
-essdir="$gopath/src/github.com/ovcharovvladimir"
+
+echo "Workspace $workspace"
+echo "Solution $solution"
 dir="$workspace/src/github.com/ovcharovvladimir"
 
 if [ ! -L "$dir/Prysm" ]; then
@@ -20,10 +23,10 @@ if [ ! -L "$dir/Prysm" ]; then
     ln -s ../../../../../. Prysm
     cd "$root"
 fi
-if [ ! -L "$essdir/essentiaHybrid" ]; then
-    mkdir -p "$essdir"
-    cd "$essdir"
-    ln -s ../../../../../. essentiaHybrid
+if [ ! -L "$dir/essentiaHybrid" ]; then
+    mkdir -p "$dir"
+    cd "$dir"
+    ln -s $solution/essentiaHybrid/. essentiaHybrid
     cd "$root"
 fi
 # Set up the environment to use the workspace.
