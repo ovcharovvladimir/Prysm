@@ -8,7 +8,7 @@ matrix:
       env:
         - lint
       before_install:
-      -go get -u github.com/alecthomas/gometalinter
+        - go get -u github.com/alecthomas/gometalinter
       script:
         - gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
 
