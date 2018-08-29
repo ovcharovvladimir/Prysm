@@ -9,6 +9,7 @@ matrix:
         - lint
       before_install:
         - go get -u github.com/alecthomas/gometalinter
+        - go get -u github.com/ovcharovvladimir/essentiaHybrid
       script:
         - gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
 
