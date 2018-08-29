@@ -3,10 +3,10 @@
 # don't need to bother with make.
 
 .PHONY: voter android ios gess-cross beacon  all  clean
-.PHONY: gess-linux gess-linux-386 gess-linux-amd64 gess-linux-mips64 gess-linux-mips64le
-.PHONY: gess-linux-arm gess-linux-arm-5 gess-linux-arm-6 gess-linux-arm-7 gess-linux-arm64
-.PHONY: gess-darwin gess-darwin-386 gess-darwin-amd64
-.PHONY: gess-windows gess-windows-386 gess-windows-amd64
+#.PHONY: gess-linux gess-linux-386 gess-linux-amd64 gess-linux-mips64 gess-linux-mips64le
+#.PHONY: gess-linux-arm gess-linux-arm-5 gess-linux-arm-6 gess-linux-arm-7 gess-linux-arm64
+#.PHONY: gess-darwin gess-darwin-386 gess-darwin-amd64
+#.PHONY: gess-windows gess-windows-386 gess-windows-amd64
 
 GOBIN = $(shell pwd)/build/bin
 GO ?= latest
