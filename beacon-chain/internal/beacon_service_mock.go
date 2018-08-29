@@ -9,8 +9,8 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	empty "github.com/golang/protobuf/ptypes/empty"
-	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	v10 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	v1 "github.com/ovcharovvladimir/Prysm/proto/beacon/p2p/v1"
+	v10 "github.com/ovcharovvladimir/Prysm/proto/beacon/rpc/v1"
 	metadata "google.golang.org/grpc/metadata"
 )
 
