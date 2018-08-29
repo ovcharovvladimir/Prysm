@@ -19,6 +19,7 @@ fi
 
 #"$GOPATH"
 root="$PWD"
+echo "GOPATH: $GOPATH"
 echo "Project Working Dir: $PWD"
 echo "Workspace: $workspace"
 echo "Solution: $solution"
