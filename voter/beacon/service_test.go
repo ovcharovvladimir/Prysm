@@ -13,7 +13,7 @@ import (
 	pbp2p "github.com/ovcharovvladimir/Prysm/proto/beacon/p2p/v1"
 	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/rpc/v1"
 	"github.com/ovcharovvladimir/Prysm/shared/testutil"
-	"github.com/ovcharovvladimir/Prysm/validator/internal"
+	"github.com/ovcharovvladimir/Prysm/voter/internal"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -112,7 +112,7 @@ func TestFetchBeaconBlocks(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Latest beacon block slot number")
 	testutil.AssertLogsContain(t, hook, "Assigned attestation slot number reached")
 
-	// If the validator is assigned to be a proposer, trigger a log upon next
+	// If the voter is assigned to be a proposer, trigger a log upon next
 	// SlotNumber being reached.
 	stream = internal.NewMockBeaconService_LatestBeaconBlockClient(ctrl)
 
@@ -207,10 +207,10 @@ func TestFetchCrystallizedState(t *testing.T) {
 
 	testutil.AssertLogsContain(t, hook, "Could not marshal crystallized state proto")
 
-	// If the current validator is not found within the active validators list, log a debug message.
-	validator := &pbp2p.ValidatorRecord{WithdrawalAddress: []byte("0x01"), StartDynasty: 1, EndDynasty: 10}
+	// If the current voter is not found within the active validators list, log a debug message.
+	voter := &pbp2p.ValidatorRecord{WithdrawalAddress: []byte("0x01"), StartDynasty: 1, EndDynasty: 10}
 	stream = internal.NewMockBeaconService_LatestCrystallizedStateClient(ctrl)
-	stream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{Validators: []*pbp2p.ValidatorRecord{validator}, CurrentDynasty: 5}, nil)
+	stream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{Validators: []*pbp2p.ValidatorRecord{voter}, CurrentDynasty: 5}, nil)
 	stream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{}, io.EOF)
 
 	mockServiceClient = internal.NewMockBeaconServiceClient(ctrl)
@@ -221,12 +221,12 @@ func TestFetchCrystallizedState(t *testing.T) {
 
 	b.fetchCrystallizedState(mockServiceClient)
 
-	testutil.AssertLogsContain(t, hook, "Validator index not found in latest crystallized state's active validator list")
+	testutil.AssertLogsContain(t, hook, "Validator index not found in latest crystallized state's active voter list")
 
 	// A faulty client.ShuffleValidators should log error.
-	validator = &pbp2p.ValidatorRecord{WithdrawalAddress: []byte{}, StartDynasty: 1, EndDynasty: 10}
+	voter = &pbp2p.ValidatorRecord{WithdrawalAddress: []byte{}, StartDynasty: 1, EndDynasty: 10}
 	stream = internal.NewMockBeaconService_LatestCrystallizedStateClient(ctrl)
-	stream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{Validators: []*pbp2p.ValidatorRecord{validator}, CurrentDynasty: 5}, nil)
+	stream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{Validators: []*pbp2p.ValidatorRecord{voter}, CurrentDynasty: 5}, nil)
 	stream.EXPECT().Recv().Return(&pbp2p.CrystallizedState{}, io.EOF)
 
 	mockServiceClient = internal.NewMockBeaconServiceClient(ctrl)
@@ -241,7 +241,7 @@ func TestFetchCrystallizedState(t *testing.T) {
 
 	b.fetchCrystallizedState(mockServiceClient)
 
-	testutil.AssertLogsContain(t, hook, "Could not fetch shuffled validator indices: something went wrong")
+	testutil.AssertLogsContain(t, hook, "Could not fetch shuffled voter indices: something went wrong")
 
 	// Height should be assigned based on the result of ShuffleValidators.
 	validator1 := &pbp2p.ValidatorRecord{WithdrawalAddress: []byte("0x0"), StartDynasty: 1, EndDynasty: 10}
@@ -269,7 +269,7 @@ func TestFetchCrystallizedState(t *testing.T) {
 
 	testutil.AssertLogsContain(t, hook, "Validator selected as attester")
 
-	// If the validator is the last index in the shuffled validator indices, it should be assigned
+	// If the voter is the last index in the shuffled voter indices, it should be assigned
 	// to be a proposer.
 	validator1 = &pbp2p.ValidatorRecord{WithdrawalAddress: []byte("0x0"), StartDynasty: 1, EndDynasty: 10}
 	validator2 = &pbp2p.ValidatorRecord{WithdrawalAddress: []byte("0x1"), StartDynasty: 1, EndDynasty: 10}

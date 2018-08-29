@@ -14,7 +14,7 @@ contract ValidatorRegistration {
 
     // Validator registers by sending a transaction of 32ETH to
     // the following deposit function. The deposit function takes in
-    // validator's public key, withdrawal shard ID (which shard
+    // voter's public key, withdrawal shard ID (which shard
     // to send the deposit back to), withdrawal address (which address
     // to send the deposit back to) and randao commitment.
     function deposit(
@@ -27,7 +27,7 @@ contract ValidatorRegistration {
         {
         require(
             msg.value == VALIDATOR_DEPOSIT,
-            "Incorrect validator deposit"
+            "Incorrect voter deposit"
         );
         require(
             !usedPubkey[_pubkey],

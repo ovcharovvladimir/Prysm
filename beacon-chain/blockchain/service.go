@@ -24,7 +24,7 @@ type ChainService struct {
 	beaconDB                       essdb.Database
 	chain                          *BeaconChain
 	web3Service                    *powchain.Web3Service
-	validator                      bool
+	voter                      bool
 	incomingBlockFeed              *event.Feed
 	incomingBlockChan              chan *types.Block
 	canonicalBlockFeed             *event.Feed
@@ -69,7 +69,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		cancel:                            cancel,
 		beaconDB:                          cfg.BeaconDB,
 		web3Service:                       cfg.Web3Service,
-		validator:                         isValidator,
+		voter:                         isValidator,
 		latestProcessedBlock:              make(chan *types.Block, cfg.BeaconBlockBuf),
 		incomingBlockChan:                 make(chan *types.Block, cfg.IncomingBlockBuf),
 		lastSlot:                          1, // TODO: Initialize from the db.
@@ -85,8 +85,8 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	if c.validator {
-		log.Infof("Starting service as validator")
+	if c.voter {
+		log.Infof("Starting service as voter")
 	} else {
 		log.Infof("Starting service as observer")
 	}
@@ -288,8 +288,8 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				continue
 			}
 
-			// Process block as a validator if beacon node has registered, else process block as an observer.
-			if c.validator {
+			// Process block as a voter if beacon node has registered, else process block as an observer.
+			if c.voter {
 				canProcess, err = c.chain.CanProcessBlock(c.web3Service.Client(), block, true)
 			} else {
 				canProcess, err = c.chain.CanProcessBlock(nil, block, false)
@@ -300,7 +300,7 @@ func (c *ChainService) blockProcessing(done <-chan struct{}) {
 				log.Debugf("Incoming block failed validity conditions: %v", err)
 			}
 
-			// Process attestation as a validator.
+			// Process attestation as a voter.
 			if err := c.chain.processAttestations(block); err != nil {
 				// We might receive a lot of blocks that fail attestation processing,
 				// so we create a debug level log instead of an error log.

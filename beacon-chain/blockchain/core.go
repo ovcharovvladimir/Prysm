@@ -39,7 +39,7 @@ type beaconState struct {
 	// it focuses on verifying aggregated signatures and pending attestations.
 	ActiveState *types.ActiveState
 	// CrystallizedState captures the beacon state at cycle transition level,
-	// it focuses on changes to the validator set, processing cross links and
+	// it focuses on changes to the voter set, processing cross links and
 	// setting up FFG checkpoints.
 	CrystallizedState *types.CrystallizedState
 }
@@ -160,7 +160,7 @@ func (b *BeaconChain) ActiveState() *types.ActiveState {
 	return b.state.ActiveState
 }
 
-// CrystallizedState contains cycle dependent validator information, changes every cycle.
+// CrystallizedState contains cycle dependent voter information, changes every cycle.
 func (b *BeaconChain) CrystallizedState() *types.CrystallizedState {
 	return b.state.CrystallizedState
 }
@@ -206,7 +206,7 @@ func (b *BeaconChain) IsCycleTransition(slotNumber uint64) bool {
 }
 
 // CanProcessBlock is called to decide if an incoming p2p block can be processed into the chain's block trie,
-// it checks time stamp, beacon chain parent block hash. It also checks pow chain reference hash if it's a validator.
+// it checks time stamp, beacon chain parent block hash. It also checks pow chain reference hash if it's a voter.
 func (b *BeaconChain) CanProcessBlock(fetcher types.POWBlockFetcher, block *types.Block, isValidator bool) (bool, error) {
 	if isValidator {
 		if _, err := fetcher.BlockByHash(context.Background(), block.PowChainRef()); err != nil {
@@ -288,7 +288,7 @@ func (b *BeaconChain) computeNewActiveState(seed common.Hash) (*types.ActiveStat
 
 	// TODO: Track reward for the proposer that just proposed the latest beacon block.
 
-	// TODO: Verify randao reveal from validator's hash pre image.
+	// TODO: Verify randao reveal from voter's hash pre image.
 
 	return newActiveState, nil
 }

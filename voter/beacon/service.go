@@ -33,7 +33,7 @@ type Config struct {
 	ProposerChanBuf int
 }
 
-// DefaultConfig options for the beacon validator service.
+// DefaultConfig options for the beacon voter service.
 func DefaultConfig() *Config {
 	return &Config{AttesterChanBuf: 5, ProposerChanBuf: 5}
 }
@@ -65,13 +65,13 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// AttesterAssignment returns a channel that is written to whenever it is the validator's
+// AttesterAssignment returns a channel that is written to whenever it is the voter's
 // slot to perform attestations.
 func (s *Service) AttesterAssignment() <-chan bool {
 	return s.attesterChan
 }
 
-// ProposerAssignment returns a channel that is written to whenever it is the validator's
+// ProposerAssignment returns a channel that is written to whenever it is the voter's
 // slot to proposer blocks.
 func (s *Service) ProposerAssignment() <-chan bool {
 	return s.proposerChan
@@ -103,7 +103,7 @@ func (s *Service) fetchBeaconBlocks(client pb.BeaconServiceClient) {
 			s.responsibility = ""
 			s.proposerChan <- true
 		} else if s.responsibility == "attester" && block.GetSlotNumber() == s.assignedHeight {
-			// TODO: Let the validator know a few slots in advance if its attestation slot is coming up
+			// TODO: Let the voter know a few slots in advance if its attestation slot is coming up
 			log.Info("Assigned attestation slot number reached")
 			s.responsibility = ""
 			s.attesterChan <- true
@@ -142,8 +142,8 @@ func (s *Service) fetchCrystallizedState(client pb.BeaconServiceClient) {
 
 		dynasty := crystallizedState.GetCurrentDynasty()
 
-		for i, validator := range crystallizedState.GetValidators() {
-			if validator.StartDynasty <= dynasty && dynasty < validator.EndDynasty {
+		for i, voter := range crystallizedState.GetValidators() {
+			if voter.StartDynasty <= dynasty && dynasty < voter.EndDynasty {
 				activeValidatorIndices = append(activeValidatorIndices, i)
 			}
 		}
@@ -157,10 +157,10 @@ func (s *Service) fetchCrystallizedState(client pb.BeaconServiceClient) {
 			}
 		}
 
-		// If validator was not found in the validator set was not set, keep listening for
+		// If voter was not found in the voter set was not set, keep listening for
 		// crystallized states.
 		if !isValidatorIndexSet {
-			log.Debug("Validator index not found in latest crystallized state's active validator list")
+			log.Debug("Validator index not found in latest crystallized state's active voter list")
 			continue
 		}
 
@@ -170,19 +170,19 @@ func (s *Service) fetchCrystallizedState(client pb.BeaconServiceClient) {
 
 		res, err := client.FetchShuffledValidatorIndices(s.ctx, req)
 		if err != nil {
-			log.Errorf("Could not fetch shuffled validator indices: %v", err)
+			log.Errorf("Could not fetch shuffled voter indices: %v", err)
 			continue
 		}
 
 		shuffledIndices := res.GetShuffledValidatorIndices()
 		if uint64(s.validatorIndex) == shuffledIndices[len(shuffledIndices)-1] {
-			// The validator needs to propose the next block.
+			// The voter needs to propose the next block.
 			s.responsibility = "proposer"
 			log.Debug("Validator selected as proposer of the next slot")
 			continue
 		}
 
-		// If the condition above did not pass, the validator is an attester.
+		// If the condition above did not pass, the voter is an attester.
 		s.responsibility = "attester"
 
 		// Based on the cutoff and assigned heights, determine the beacon block
@@ -193,8 +193,8 @@ func (s *Service) fetchCrystallizedState(client pb.BeaconServiceClient) {
 		// The algorithm functions as follows:
 		// Given a list of heights: [0 19 38 57 12 31 50] and
 		// A list of cutoff indices: [0 142 285 428 571 714 857 1000]
-		// if the validator index is between 0-142, it can attest at height 0, if it is
-		// between 142-285, that validator can attest at height 19, etc.
+		// if the voter index is between 0-142, it can attest at height 0, if it is
+		// between 142-285, that voter can attest at height 19, etc.
 		heightIndex := 0
 		for i := 0; i < len(currentCutoffs)-1; i++ {
 			lowCutoff := currentCutoffs[i]

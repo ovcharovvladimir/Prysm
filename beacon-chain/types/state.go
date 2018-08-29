@@ -47,8 +47,8 @@ func NewGenesisStates() (*ActiveState, *CrystallizedState, error) {
 	// TODO: Perform this task from some sort of genesis state json config instead.
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < params.BootstrappedValidatorsCount; i++ {
-		validator := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty, Balance: params.DefaultBalance, WithdrawalAddress: []byte{}, PublicKey: 0}
-		validators = append(validators, validator)
+		voter := &pb.ValidatorRecord{StartDynasty: 0, EndDynasty: params.DefaultEndDynasty, Balance: params.DefaultBalance, WithdrawalAddress: []byte{}, PublicKey: 0}
+		validators = append(validators, voter)
 	}
 
 	// Bootstrap attester indices for slots, each slot contains an array of attester indices.
@@ -303,7 +303,7 @@ func (c *CrystallizedState) ValidatorsLength() int {
 	return len(c.data.Validators)
 }
 
-// SetValidators sets the validator set.
+// SetValidators sets the voter set.
 func (c *CrystallizedState) SetValidators(validators []*pb.ValidatorRecord) {
 	c.data.Validators = validators
 }

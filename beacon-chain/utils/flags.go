@@ -5,10 +5,10 @@ import (
 )
 
 var (
-	// ValidatorFlag determines if a node will run as validator. Participant should have deposited 32ETH and ready to perform proposer and attester duties.
+	// ValidatorFlag determines if a node will run as voter. Participant should have deposited 32ETH and ready to perform proposer and attester duties.
 	ValidatorFlag = cli.BoolFlag{
-		Name:  "validator",
-		Usage: "Whether or not to run the node as beacon chain validator",
+		Name:  "voter",
+		Usage: "Whether or not to run the node as beacon chain voter",
 	}
 	// SimulatorFlag determines if a node will run only as a simulator service.
 	SimulatorFlag = cli.BoolFlag{
@@ -24,9 +24,9 @@ var (
 	// VrcContractFlag defines a flag for VRC contract address.
 	VrcContractFlag = cli.StringFlag{
 		Name:  "vrcaddr",
-		Usage: "Validator registration contract address. Beacon chain node will listen logs coming from VRC to determine when validator is eligible to participate.",
+		Usage: "Validator registration contract address. Beacon chain node will listen logs coming from VRC to determine when voter is eligible to participate.",
 	}
-	// PubKeyFlag defines a flag for validator's public key on the mainchain
+	// PubKeyFlag defines a flag for voter's public key on the mainchain
 	PubKeyFlag = cli.StringFlag{
 		Name:  "pubkey",
 		Usage: "Validator's public key. Beacon chain node will listen to VRC log to determine when registration has completed based on this public key address.",

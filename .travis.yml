@@ -25,7 +25,7 @@ matrix:
         - go get -u  github.com/libp2p/go-testutil
       script:
         - gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
-        - make dist
+        - make all
     - language: node_js
       os: linux
       env:

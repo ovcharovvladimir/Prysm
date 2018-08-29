@@ -16,7 +16,7 @@ func TestFaultyShuffleIndices(t *testing.T) {
 	}
 
 	if _, err := ShuffleIndices(common.Hash{'a'}, list); err == nil {
-		t.Error("Shuffle should have failed when validator count exceeds MaxValidators")
+		t.Error("Shuffle should have failed when voter count exceeds MaxValidators")
 	}
 }
 

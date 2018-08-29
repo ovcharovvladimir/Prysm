@@ -60,7 +60,7 @@ func setup() (*testAccount, error) {
 func TestSetupAndContractRegistration(t *testing.T) {
 	_, err := setup()
 	if err != nil {
-		log.Fatalf("Can not deploy validator registration contract: %v", err)
+		log.Fatalf("Can not deploy voter registration contract: %v", err)
 	}
 }
 

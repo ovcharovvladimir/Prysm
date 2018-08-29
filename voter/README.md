@@ -39,7 +39,7 @@ Cross-links are holistic descriptions of the state and transactions on a certain
 
 For detailed information on protocol primitives including collations, see: [Protocol Primitives](#protocol-primitives). We will have 2 types of nodes that do the heavy lifting of our sharding logic: **proposers and attesters**. The basic role of proposers is to fetch pending transactions from the txpool, wrap them into collations, grow the shard chains, and submit cross-links to the beacon chain.
 
-We still keep the Ethereum main chain and deploy a smart contract into it known as the **Validator Registration Contract**, where users can deposit and burn 32 ETH. Beacon chain nodes would listen to deposits in this contract and consequently queue up a user with the associated address as a validator in the beacon chain PoS system. Validators then become part of a registered validator set in the beacon chain, and are committees of validators are selected to become attesters on shard chains in certain periods of blocks until they are ventually reshuffled into different shards.
+We still keep the Ethereum main chain and deploy a smart contract into it known as the **Validator Registration Contract**, where users can deposit and burn 32 ETH. Beacon chain nodes would listen to deposits in this contract and consequently queue up a user with the associated address as a voter in the beacon chain PoS system. Validators then become part of a registered voter set in the beacon chain, and are committees of validators are selected to become attesters on shard chains in certain periods of blocks until they are ventually reshuffled into different shards.
 
 Attesters are in charge of checking for data availability of such collations and reach consensus on canonical shard chains. So then, are proposers in charge of state execution? The short answer is that phase 1 will contain **no state execution**. Instead, proposers will simply package all types of transactions into collations and later down the line, agents known as executors will download, run, and validate state as they need to through possibly different types of execution engines (potentially TrueBit-style, interactive execution).
 
@@ -53,7 +53,7 @@ Sharding revolves around being able to store shard metadata in a full proof of s
 
 # Roadmap Phases
 
-Prysmatic Labs will implement the beacon chain spec posted on [ETHResearch](https://ethresear.ch/t/convenience-link-to-full-casper-chain-v2-spec/2332) by the Foundation's research team and roll out a sharding validator that communicates with this beacon.
+Prysmatic Labs will implement the beacon chain spec posted on [ETHResearch](https://ethresear.ch/t/convenience-link-to-full-casper-chain-v2-spec/2332) by the Foundation's research team and roll out a sharding voter that communicates with this beacon.
 
 To concretize these phases, we will be releasing our implementation of sharding and the beacon chain as follows:
 
@@ -104,9 +104,9 @@ Our implementation revolves around the following core components:
 
 A basic, end-to-end example of the system is as follows:
 
-1.  _**User deposits 32 ETH into a Validator Registration Contract on the main chain:**_ the beacon chain listens for the logs in the main chain to queue that validator into the beacon chain chain's main event loop
+1.  _**User deposits 32 ETH into a Validator Registration Contract on the main chain:**_ the beacon chain listens for the logs in the main chain to queue that voter into the beacon chain chain's main event loop
 
-2.  _**Registered validator begins PoS process to propose blocks:**_ the PoS validator has the resposibility to participate in the addition of new blocks to the beacon chain
+2.  _**Registered voter begins PoS process to propose blocks:**_ the PoS voter has the resposibility to participate in the addition of new blocks to the beacon chain
 
 3.  _**RANDAO mechanism selects committees of proposers/attesters/attesters for shards:**_ the beacon chain node will use its RANDAO mechanism to select committees of proposers, attesters, and attesters that each have responsibilities within the sharding system. Refer to the [Full Casper Chain V2 Doc](https://ethresear.ch/t/convenience-link-to-full-casper-chain-v2-spec/2332) for extensive detail on the different fields in the state of the beacon chain related to sharding
 
@@ -118,7 +118,7 @@ Our Ruby Release requires users to start a local gess node running a localized, 
 
 1.  _**Sync to the latest block header on the beacon chain:**_ the node will begin a sync process for the beacon chain
 
-2.  _**Assign the validator as a proposer/attester/attester based on RANDAO mechanism:**_ on incoming headers, the validator will interact with the SMC to check if the current user is an eligible attester for an upcoming period (only a few minutes notice)
+2.  _**Assign the voter as a proposer/attester/attester based on RANDAO mechanism:**_ on incoming headers, the voter will interact with the SMC to check if the current user is an eligible attester for an upcoming period (only a few minutes notice)
 
 3.  _**Process shard cross-links:**_ once a attester is selected, he/she has to download subimtted collation headers for the shard in a certain period and check for their data availability
 

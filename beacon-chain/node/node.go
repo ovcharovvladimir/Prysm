@@ -184,7 +184,7 @@ func (b *BeaconNode) registerPOWChainService(ctx *cli.Context) error {
 
 	rpcClient, err := gethRPC.Dial(b.ctx.GlobalString(utils.Web3ProviderFlag.Name))
 	if err != nil {
-		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
+		log.Fatalf("Access to PoW chain is required for voter. Unable to connect to Geth node: %v", err)
 	}
 	powClient := essclient.NewClient(rpcClient)
 

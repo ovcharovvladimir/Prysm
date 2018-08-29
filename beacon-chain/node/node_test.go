@@ -31,7 +31,7 @@ func TestNodeObserver_Builds(t *testing.T) {
 	os.RemoveAll(tmp)
 }
 
-// Test that the beacon chain validator node build fails without PoW service.
+// Test that the beacon chain voter node build fails without PoW service.
 func TestNodeValidator_Builds(t *testing.T) {
 	if os.Getenv("TEST_NODE_PANIC") == "1" {
 		app := cli.NewApp()
@@ -39,7 +39,7 @@ func TestNodeValidator_Builds(t *testing.T) {
 		set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
 		tmp := fmt.Sprintf("%s/datadir", os.TempDir())
 		set.String("datadir", tmp, "node data directory")
-		set.Bool("validator", true, "want to be a validator?")
+		set.Bool("voter", true, "want to be a voter?")
 
 		context := cli.NewContext(app, set, nil)
 

@@ -1,8 +1,8 @@
 # Validator Registration Workflow
 
-This doc summarizes the work flow of registering to become a validator in the beacon chain. The scope is within Ruby Release.
+This doc summarizes the work flow of registering to become a voter in the beacon chain. The scope is within Ruby Release.
 
-### Step 1: Deploy validator registration contract if it hasn't been done
+### Step 1: Deploy voter registration contract if it hasn't been done
 To deploy VRC, we can use [deployVRC](https://github.com/terenc3t/gess-sharding/tree/contract-util/contracts/deployVRC) utility.  
 Once we get the VRC contract address, we can launch our beacon chain node
 ```

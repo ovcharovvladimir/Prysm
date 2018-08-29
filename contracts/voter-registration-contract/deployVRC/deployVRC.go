@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	contracts "github.com/ovcharovvladimir/Prysm/contracts/validator-registration-contract"
+	contracts "github.com/ovcharovvladimir/Prysm/contracts/voter-registration-contract"
 	"github.com/ovcharovvladimir/essentiaHybrid/accounts/abi/bind"
 	"github.com/ovcharovvladimir/essentiaHybrid/accounts/keystore"
 	"github.com/ovcharovvladimir/essentiaHybrid/crypto"
@@ -34,7 +34,7 @@ func main() {
 
 	app := cli.NewApp()
 	app.Name = "deployVRC"
-	app.Usage = "this is a util to deploy validator registration contract"
+	app.Usage = "this is a util to deploy voter registration contract"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:        "keystoreUTCPath",
@@ -119,7 +119,7 @@ func main() {
 			txOps.Value = big.NewInt(0)
 		}
 
-		// Deploy validator registration contract
+		// Deploy voter registration contract
 		addr, tx, _, err := contracts.DeployValidatorRegistration(txOps, client)
 		if err != nil {
 			log.Fatal(err)

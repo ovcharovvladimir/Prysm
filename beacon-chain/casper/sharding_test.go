@@ -43,8 +43,8 @@ func TestSampleAttestersAndProposers(t *testing.T) {
 	// Create validators more than params.MaxValidators, this should fail.
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < params.MaxValidators+1; i++ {
-		validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
-		validators = append(validators, validator)
+		voter := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
+		validators = append(validators, voter)
 	}
 
 	if _, _, err := SampleAttestersAndProposers(common.Hash{'A'}, validators, 1); err == nil {
@@ -59,8 +59,8 @@ func TestSampleAttestersAndProposers(t *testing.T) {
 	// Create 1000 validators in ActiveValidators.
 	validators = validators[:0]
 	for i := 0; i < 1000; i++ {
-		validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
-		validators = append(validators, validator)
+		voter := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
+		validators = append(validators, voter)
 	}
 
 	attesters, proposer, err := SampleAttestersAndProposers(common.Hash{'A'}, validators, 1)
@@ -87,14 +87,14 @@ func TestSampleAttestersAndProposers(t *testing.T) {
 		t.Errorf("validatorsByHeightShard failed with %v:", err)
 	}
 	if len(indices) != 8192 {
-		t.Errorf("incorret length for validator indices. Want: 8192. Got: %v", len(indices))
+		t.Errorf("incorret length for voter indices. Want: 8192. Got: %v", len(indices))
 	}
 
 	// Create a small number of validators validators in ActiveValidators.
 	validators = validators[:0]
 	for i := 0; i < 20; i++ {
-		validator := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
-		validators = append(validators, validator)
+		voter := &pb.ValidatorRecord{StartDynasty: 1, EndDynasty: 100}
+		validators = append(validators, voter)
 	}
 
 	attesters, proposer, err = SampleAttestersAndProposers(common.Hash{'A'}, validators, 1)
@@ -121,6 +121,6 @@ func TestSampleAttestersAndProposers(t *testing.T) {
 		t.Errorf("validatorsByHeightShard failed with %v:", err)
 	}
 	if len(indices) != 8192 {
-		t.Errorf("incorret length for validator indices. Want: 8192. Got: %v", len(indices))
+		t.Errorf("incorret length for voter indices. Want: 8192. Got: %v", len(indices))
 	}
 }

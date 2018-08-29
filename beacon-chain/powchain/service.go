@@ -21,7 +21,7 @@ var log = logrus.WithField("prefix", "powchain")
 // Beacon Chain requires synchronization with the PoW chain's current
 // blockhash, block number, and access to logs within the
 // Validator Registration Contract on the PoW chain to kick off the beacon
-// chain's validator registration process.
+// chain's voter registration process.
 type Web3Service struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc

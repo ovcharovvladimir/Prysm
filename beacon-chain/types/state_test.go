@@ -120,7 +120,7 @@ func TestCrystallizedState(t *testing.T) {
 		t.Errorf("wanted 0 validators, received %v", crystallized.ValidatorsLength())
 	}
 	if !reflect.DeepEqual(crystallized.Validators(), validators) {
-		t.Errorf("mismatched validator set: wanted %v, received %v", validators, crystallized.Validators())
+		t.Errorf("mismatched voter set: wanted %v, received %v", validators, crystallized.Validators())
 	}
 	crystallized.ClearIndicesForHeights()
 	if !reflect.DeepEqual(crystallized.IndicesForHeights(), []*pb.ShardAndCommitteeArray{}) {

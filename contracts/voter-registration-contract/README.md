@@ -1,9 +1,9 @@
 ## Validator Registration Contract
 
-For beacon chain design, a validator will deposit 32 ETH to the main chain smart contract.
+For beacon chain design, a voter will deposit 32 ETH to the main chain smart contract.
 The deposit is considered to be burned. As you burn the 32 ETH to participate,
-the beacon chain will see it and will credit the validator with the validator bond,
-and the validator can begin to validate. At some point in the future, after a hard fork,
+the beacon chain will see it and will credit the voter with the voter bond,
+and the voter can begin to validate. At some point in the future, after a hard fork,
 the original deposit + interest can be withdrawn back on one of the shards.
 
 ## How to execute tests

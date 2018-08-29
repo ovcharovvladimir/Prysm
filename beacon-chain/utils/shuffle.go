@@ -21,7 +21,7 @@ func ShuffleIndices(seed common.Hash, validatorList []uint32) ([]uint32, error) 
 
 	// shuffle stops at the second to last index.
 	for i := 0; i < validatorCount-1; i++ {
-		// convert every 3 bytes to random number, replace validator index with that number.
+		// convert every 3 bytes to random number, replace voter index with that number.
 		for j := 0; j+3 < len(hashSeed); j += 3 {
 			swapNum := int(hashSeed[j] + hashSeed[j+1] + hashSeed[j+2])
 			remaining := validatorCount - i

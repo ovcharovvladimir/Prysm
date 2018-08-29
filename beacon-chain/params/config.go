@@ -8,7 +8,7 @@ const (
 	CycleLength = 64
 	// ShardCount is a fixed number.
 	ShardCount = 1024
-	// DefaultBalance of a validator in ETH.
+	// DefaultBalance of a voter in ETH.
 	DefaultBalance = 32
 	// MaxValidators in the protocol.
 	MaxValidators = 4194304
@@ -16,7 +16,7 @@ const (
 	SlotDuration = 8
 	// Cofactor is used cutoff algorithm to select height and shard cutoffs.
 	Cofactor = 19
-	// MinCommiteeSize is the minimal number of validator needs to be in a committee.
+	// MinCommiteeSize is the minimal number of voter needs to be in a committee.
 	MinCommiteeSize = 128
 	// DefaultEndDynasty is the upper bound of dynasty. We use it to track queued and exited validators.
 	DefaultEndDynasty = 9999999999999999999

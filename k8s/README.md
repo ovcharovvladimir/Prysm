@@ -78,7 +78,7 @@ deployment yaml.
 
 TODO: This process is currently manual and needs to be improved!
 
-Using the private key above and the deployVRC tool, deploy the validator
+Using the private key above and the deployVRC tool, deploy the voter
 registration contract.
 
 ```bash
@@ -96,7 +96,7 @@ http://192.168.99.100:31745
 Using the first port provided (RPC). Run the deploy VRC tool
 
 ```
-bazel run //contracts/validator-registration-contract/deployVRC --\
+bazel run //contracts/voter-registration-contract/deployVRC --\
   --privKey=783da8ef5343c3019748506305d400bca8c324a5819f3a7f7fbf0c0a0d799b09 \
   --httpPath=http://192.168.99.100:30051
 ```

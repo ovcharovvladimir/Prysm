@@ -88,7 +88,7 @@ func TestStartStop(t *testing.T) {
 		t.Errorf("incorrect recent block hashes")
 	}
 	if len(chainService.CurrentCrystallizedState().Validators()) != params.BootstrappedValidatorsCount {
-		t.Errorf("incorrect default validator size")
+		t.Errorf("incorrect default voter size")
 	}
 	if chainService.ContainsBlock([32]byte{}) {
 		t.Errorf("chain is not empty")
@@ -219,8 +219,8 @@ func TestProcessingBadBlock(t *testing.T) {
 
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 40; i++ {
-		validator := &pb.ValidatorRecord{Balance: 32, StartDynasty: 1, EndDynasty: 10}
-		validators = append(validators, validator)
+		voter := &pb.ValidatorRecord{Balance: 32, StartDynasty: 1, EndDynasty: 10}
+		validators = append(validators, voter)
 	}
 
 	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{Validators: validators, CurrentDynasty: 5})
@@ -379,8 +379,8 @@ func TestProcessingBlockWithAttestations(t *testing.T) {
 
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 40; i++ {
-		validator := &pb.ValidatorRecord{Balance: 32, StartDynasty: 1, EndDynasty: 10}
-		validators = append(validators, validator)
+		voter := &pb.ValidatorRecord{Balance: 32, StartDynasty: 1, EndDynasty: 10}
+		validators = append(validators, voter)
 	}
 
 	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{

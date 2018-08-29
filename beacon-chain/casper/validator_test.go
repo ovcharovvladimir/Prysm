@@ -25,16 +25,16 @@ func TestRotateValidatorSet(t *testing.T) {
 		CurrentDynasty: 10,
 	}
 
-	// Rotate validator set and increment dynasty count by 1.
+	// Rotate voter set and increment dynasty count by 1.
 	rotatedValidators := RotateValidatorSet(data.Validators, data.CurrentDynasty)
 	if !reflect.DeepEqual(ActiveValidatorIndices(rotatedValidators, data.CurrentDynasty), []uint32{2, 3, 4, 5}) {
-		t.Errorf("active validator indices should be [2,3,4,5], got: %v", ActiveValidatorIndices(rotatedValidators, data.CurrentDynasty))
+		t.Errorf("active voter indices should be [2,3,4,5], got: %v", ActiveValidatorIndices(rotatedValidators, data.CurrentDynasty))
 	}
 	if len(QueuedValidatorIndices(rotatedValidators, data.CurrentDynasty)) != 0 {
-		t.Errorf("queued validator indices should be [], got: %v", QueuedValidatorIndices(rotatedValidators, data.CurrentDynasty))
+		t.Errorf("queued voter indices should be [], got: %v", QueuedValidatorIndices(rotatedValidators, data.CurrentDynasty))
 	}
 	if !reflect.DeepEqual(ExitedValidatorIndices(rotatedValidators, data.CurrentDynasty), []uint32{0, 1}) {
-		t.Errorf("exited validator indices should be [0,1], got: %v", ExitedValidatorIndices(rotatedValidators, data.CurrentDynasty))
+		t.Errorf("exited voter indices should be [0,1], got: %v", ExitedValidatorIndices(rotatedValidators, data.CurrentDynasty))
 	}
 
 	// Another run without queuing validators.
@@ -51,17 +51,17 @@ func TestRotateValidatorSet(t *testing.T) {
 		CurrentDynasty: 10,
 	}
 
-	// rotate validator set and increment dynasty count by 1.
+	// rotate voter set and increment dynasty count by 1.
 	RotateValidatorSet(data.Validators, data.CurrentDynasty)
 
 	if !reflect.DeepEqual(ActiveValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{2, 3, 4}) {
-		t.Errorf("active validator indices should be [2,3,4], got: %v", ActiveValidatorIndices(data.Validators, data.CurrentDynasty))
+		t.Errorf("active voter indices should be [2,3,4], got: %v", ActiveValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
 	if len(QueuedValidatorIndices(data.Validators, data.CurrentDynasty)) != 0 {
-		t.Errorf("queued validator indices should be [], got: %v", QueuedValidatorIndices(data.Validators, data.CurrentDynasty))
+		t.Errorf("queued voter indices should be [], got: %v", QueuedValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
 	if !reflect.DeepEqual(ExitedValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{0, 1}) {
-		t.Errorf("exited validator indices should be [0,1], got: %v", ExitedValidatorIndices(data.Validators, data.CurrentDynasty))
+		t.Errorf("exited voter indices should be [0,1], got: %v", ExitedValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
 }
 
@@ -74,7 +74,7 @@ func TestHasVoted(t *testing.T) {
 	for i := 0; i < len(pendingAttestation.AttesterBitfield); i++ {
 		voted := utils.CheckBit(pendingAttestation.AttesterBitfield, i)
 		if !voted {
-			t.Error("validator voted but received didn't vote")
+			t.Error("voter voted but received didn't vote")
 		}
 	}
 
@@ -86,10 +86,10 @@ func TestHasVoted(t *testing.T) {
 	for i := 0; i < len(pendingAttestation.AttesterBitfield); i++ {
 		voted := utils.CheckBit(pendingAttestation.AttesterBitfield, i)
 		if i%2 == 0 && voted {
-			t.Error("validator didn't vote but received voted")
+			t.Error("voter didn't vote but received voted")
 		}
 		if i%2 == 1 && !voted {
-			t.Error("validator voted but received didn't vote")
+			t.Error("voter voted but received didn't vote")
 		}
 	}
 }
@@ -108,13 +108,13 @@ func TestValidatorIndices(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(ActiveValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{0, 1, 2, 3, 4}) {
-		t.Errorf("active validator indices should be [0 1 2 3 4], got: %v", ActiveValidatorIndices(data.Validators, data.CurrentDynasty))
+		t.Errorf("active voter indices should be [0 1 2 3 4], got: %v", ActiveValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
 	if !reflect.DeepEqual(QueuedValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{5}) {
-		t.Errorf("queued validator indices should be [5], got: %v", QueuedValidatorIndices(data.Validators, data.CurrentDynasty))
+		t.Errorf("queued voter indices should be [5], got: %v", QueuedValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
 	if len(ExitedValidatorIndices(data.Validators, data.CurrentDynasty)) != 0 {
-		t.Errorf("exited validator indices to be empty, got: %v", ExitedValidatorIndices(data.Validators, data.CurrentDynasty))
+		t.Errorf("exited voter indices to be empty, got: %v", ExitedValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
 
 	data = &pb.CrystallizedState{
@@ -130,12 +130,12 @@ func TestValidatorIndices(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(ActiveValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{0, 1}) {
-		t.Errorf("active validator indices should be [0 1 2 4 5], got: %v", ActiveValidatorIndices(data.Validators, data.CurrentDynasty))
+		t.Errorf("active voter indices should be [0 1 2 4 5], got: %v", ActiveValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
 	if !reflect.DeepEqual(QueuedValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{2, 3}) {
-		t.Errorf("queued validator indices should be [3], got: %v", QueuedValidatorIndices(data.Validators, data.CurrentDynasty))
+		t.Errorf("queued voter indices should be [3], got: %v", QueuedValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
 	if !reflect.DeepEqual(ExitedValidatorIndices(data.Validators, data.CurrentDynasty), []uint32{4, 5}) {
-		t.Errorf("exited validator indices should be [3], got: %v", ExitedValidatorIndices(data.Validators, data.CurrentDynasty))
+		t.Errorf("exited voter indices should be [3], got: %v", ExitedValidatorIndices(data.Validators, data.CurrentDynasty))
 	}
 }

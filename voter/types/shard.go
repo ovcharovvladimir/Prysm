@@ -1,4 +1,4 @@
-// Package types defines the types used throughout the validator.
+// Package types defines the types used throughout the voter.
 package types
 
 import (

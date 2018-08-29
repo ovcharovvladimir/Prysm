@@ -7,14 +7,14 @@ import (
 	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/p2p/v1"
 )
 
-// BeaconCommittee structure encompassing a specific shard and validator indices
+// BeaconCommittee structure encompassing a specific shard and voter indices
 // within that shard's committee.
 type BeaconCommittee struct {
 	ShardID   int
 	Committee []uint32
 }
 
-// ValidatorsByHeightShard splits a shuffled validator list by height and by shard,
+// ValidatorsByHeightShard splits a shuffled voter list by height and by shard,
 // it ensures there's enough validators per height and per shard, if not, it'll skip
 // some heights and shards.
 func ValidatorsByHeightShard(seed common.Hash, activeValidators []*pb.ValidatorRecord, dynasty uint64, crosslinkStartShard uint64) ([]*BeaconCommittee, error) {
