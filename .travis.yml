@@ -24,9 +24,9 @@ matrix:
         - go get -u github.com/golang/mock/gomock
         - go get -u  github.com/libp2p/go-testutil
       script:
-        - gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
-        - make beacon
-        - make voter
+       # - gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
+        - go install beacon-chain
+        - go install voter
     - language: node_js
       os: linux
       env:
