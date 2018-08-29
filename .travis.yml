@@ -12,19 +12,19 @@ matrix:
     - os: linux
       env:
         - coverage
-before_install:
-  - go get -u github.com/x-cray/logrus-prefixed-formatter
-  - go get -u  github.com/multiformats/go-multiaddr
-  - go get -u  github.com/urfave/cli
-  - go get -u google.golang.org/grpc
-  - go get -u golang.org/x/crypto/blake2b
-  - go get -u github.com/libp2p/go-libp2p/
-  - go get -u github.com/fjl/memsize/memsizeui
-  - go get -u github.com/libp2p/go-floodsub
-  - go get -u github.com/whyrusleeping/mdns
-  - go get -u github.com/syndtr/goleveldb/leveldb
-  - go get -u github.com/golang/protobuf/proto
-  - go get -u github.com/golang/mock/gomock
+      before_install:
+        - go get -u github.com/x-cray/logrus-prefixed-formatter
+        - go get -u  github.com/multiformats/go-multiaddr
+        - go get -u  github.com/urfave/cli
+        - go get -u google.golang.org/grpc
+        - go get -u golang.org/x/crypto/blake2b
+        - go get -u github.com/libp2p/go-libp2p/
+        - go get -u github.com/fjl/memsize/memsizeui
+        - go get -u github.com/libp2p/go-floodsub
+        - go get -u github.com/whyrusleeping/mdns
+        - go get -u github.com/syndtr/goleveldb/leveldb
+        - go get -u github.com/golang/protobuf/proto
+        - go get -u github.com/golang/mock/gomock
       script:
         - ./coverage.sh
         - bash <(curl -s https://codecov.io/bash)
