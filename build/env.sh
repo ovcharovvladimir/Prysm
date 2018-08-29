@@ -9,9 +9,9 @@ fi
 
 # Create fake Go workspace if it doesn't exist yet.
 workspace="$PWD/build/_workspace"
-if [[ "$PWD" == *travis* ]];
+if [[ "$PWD" == *"travis"* ]];
 then
-    solution="/home/travis/gopath/src"
+    solution="$GOPATH/go/src"
     #"${PWD%/go/src/*}"
 else
     solution="${PWD%/go/src/*}/go/src"
