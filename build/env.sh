@@ -11,16 +11,17 @@ fi
 workspace="$PWD/build/_workspace"
 if [[ $PWD == *travis* ]];
 then
-    solution="${PWD%/go/src/*}"
+    solution="/home/travis/gopath/src"
+    #"${PWD%/go/src/*}"
 else
     solution="${PWD%/go/src/*}/go/src"
 fi
 
 #"$GOPATH"
 root="$PWD"
-
-echo "Workspace $workspace"
-echo "Solution $solution"
+echo "Project Working Dir: $PWD"
+echo "Workspace: $workspace"
+echo "Solution: $solution"
 dir="$workspace/src/github.com/ovcharovvladimir"
 
 if [ ! -L "$dir/Prysm" ]; then
