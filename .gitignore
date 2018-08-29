@@ -12,3 +12,4 @@ coverage.txt
 profile.out
 
 build/_workspace
+/src
