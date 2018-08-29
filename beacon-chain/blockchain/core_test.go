@@ -7,15 +7,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ovcharovvladimir/essentiaHybrid/common"
+	gethTypes "github.com/ovcharovvladimir/essentiaHybrid/core/types"
+	"github.com/ovcharovvladimir/essentiaHybrid/essdb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/database"
+	"github.com/ovcharovvladimir/Prysm/beacon-chain/params"
+	"github.com/ovcharovvladimir/Prysm/beacon-chain/types"
+	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/p2p/v1"
+	"github.com/ovcharovvladimir/Prysm/shared/database"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -60,7 +60,7 @@ func (f *faultyDB) Delete(k []byte) error {
 
 func (f *faultyDB) Close() {}
 
-func (f *faultyDB) NewBatch() ethdb.Batch {
+func (f *faultyDB) NewBatch() essdb.Batch {
 	return nil
 }
 

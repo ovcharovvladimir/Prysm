@@ -1,6 +1,6 @@
 ## Utility to Deploy Validator Registration Contract
 
-This is a utility to help users deploy validator registration contract for running their own beacon chain node in a local containerized set up. To run the utility, it assumes there is a running geth node as a separate process attached to proof-of-work main chain. The utility will deploy the validator registration contract and print out the contract address. Users will pass the contract address to the beacon chain node to monitor when they have been conducted to become an active validator.
+This is a utility to help users deploy validator registration contract for running their own beacon chain node in a local containerized set up. To run the utility, it assumes there is a running gess node as a separate process attached to proof-of-work main chain. The utility will deploy the validator registration contract and print out the contract address. Users will pass the contract address to the beacon chain node to monitor when they have been conducted to become an active validator.
 
 ### Usage
 
@@ -12,7 +12,7 @@ This is a utility to help users deploy validator registration contract for runni
 
 *Flags:*  
    **--keystoreUTCPath**    Keystore UTC file to unlock account (default: "./datadir/keystore/UTC...")   
-   **--ipcPath**        Filename for IPC socket/pipe within the datadir (default: "./geth.ipc")   
+   **--ipcPath**        Filename for IPC socket/pipe within the datadir (default: "./gess.ipc")   
    **--httpPath**      HTTP-RPC server listening interface (default: "http://localhost:8545/")   
    **--passwordFile**   Password file for unlock account (default: "./password.txt")   
    **--privKey**       Private key to unlock account   
@@ -30,7 +30,7 @@ bazel run //deployVRC -- --privKey yourPrivateKey
 To use UTC JSON with IPC:
 ```
 bazel run //deployVRC --\
-  --ipcPath /path/to/your/geth.ipc \
+  --ipcPath /path/to/your/gess.ipc \
   --UTCPath /path/to/your/keystore/UTCJSON \
   --passwordFile /path/to/your/password.txt
 ```

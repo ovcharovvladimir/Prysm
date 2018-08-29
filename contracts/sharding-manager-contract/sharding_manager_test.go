@@ -7,12 +7,12 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ovcharovvladimir/essentiaHybrid/accounts/abi/bind"
+	"github.com/ovcharovvladimir/essentiaHybrid/accounts/abi/bind/backends"
+	"github.com/ovcharovvladimir/essentiaHybrid/common"
+	"github.com/ovcharovvladimir/essentiaHybrid/core"
+	"github.com/ovcharovvladimir/essentiaHybrid/core/types"
+	"github.com/ovcharovvladimir/essentiaHybrid/crypto"
 )
 
 type smcTestHelper struct {

@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/ovcharovvladimir/Prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli"
 )

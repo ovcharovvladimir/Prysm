@@ -10,10 +10,10 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes/empty"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/validator/internal"
+	pbp2p "github.com/ovcharovvladimir/Prysm/proto/beacon/p2p/v1"
+	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/rpc/v1"
+	"github.com/ovcharovvladimir/Prysm/shared/testutil"
+	"github.com/ovcharovvladimir/Prysm/validator/internal"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )

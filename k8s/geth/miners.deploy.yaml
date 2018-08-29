@@ -3,19 +3,19 @@ apiVersion: apps/v1
 metadata:
   name: miner
   labels:
-    universe: geth
+    universe: gess
     component: miner
 spec:
   replicas: 1
   serviceName: "miners"
   selector: 
     matchLabels:
-      universe: geth
+      universe: gess
       component: miner
   template:
     metadata:
       labels:
-        universe: geth
+        universe: gess
         component: miner
     spec:
       priorityClassName: production-priority
@@ -33,14 +33,14 @@ spec:
            - containerPort: 30303
              name: discovery-udp
              protocol: UDP
-          # Use /bin/sh -c to execute geth so that we have access to HOSTNAME in 
+          # Use /bin/sh -c to execute gess so that we have access to HOSTNAME in
           # the command arguments.
           # https://github.com/kubernetes/kubernetes/issues/57726
           command:
             - "/bin/sh"
             - "-c"
             - >
-              geth
+              gess
               --networkid=1337
               --bootnodes=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_SERVICE_HOST):$(GETH_BOOTNODE_SERVICE_PORT_BOOTNODE_UDP)
               --ethstats=$HOSTNAME:$(ETHSTATS_WS_SECRET)@$(GETH_ETHSTATS_SERVICE_HOST):$(GETH_ETHSTATS_SERVICE_PORT)
@@ -75,7 +75,7 @@ spec:
             - name: BOOTNODE_PUBKEY
               valueFrom:
                 secretKeyRef:
-                  name: geth-bootnode-secret
+                  name: gess-bootnode-secret
                   key: public_key
           resources:
             requests:
@@ -87,7 +87,7 @@ spec:
       initContainers:
         - name: genesis
           image: ethereum/client-go:alltools-stable
-          command: ["geth"]
+          command: ["gess"]
           args: ["--datadir=/ethereum", "init", "/data/genesis.json"]
           volumeMounts:
             - name: genesis
@@ -100,7 +100,7 @@ spec:
           emptyDir: {}
         - name: genesis
           secret: 
-            secretName: geth-genesis
+            secretName: gess-genesis
             items:
               - key: json
                 path: genesis.json

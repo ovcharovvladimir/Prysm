@@ -1,11 +1,11 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: geth-ethstats
+  name: gess-ethstats
 spec:
   selector:
     component: ethstats
-    universe: geth
+    universe: gess
   ports:
     - port: 3000
       targetPort: 3000

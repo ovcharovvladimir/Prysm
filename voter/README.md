@@ -61,7 +61,7 @@ To concretize these phases, we will be releasing our implementation of sharding 
 
 Our current work is focused on creating a localized version of a beacon chain with a sharding system that would include the following:
 
--   A minimal, **beacon chain node** that will interact with a main chain geth node via JSON-RPC
+-   A minimal, **beacon chain node** that will interact with a main chain gess node via JSON-RPC
 -   A **Validator Registration Contract** deployed on the main chain where a beacon node can read logs to check for registered validators
 -   A minimal, gossipsub shardp2p network
 -   Ability for proposers/attesters/attesters to be selected by the beacon chain's randomness into committees that work on specific shards
@@ -114,7 +114,7 @@ A basic, end-to-end example of the system is as follows:
 
 ## System Start and User Entrypoint
 
-Our Ruby Release requires users to start a local geth node running a localized, private blockchain to deploy the **Validator Registration Contract**. This will kickstart the entire beacon chain sync process and listen for registrations of validators in the main chain VRC. The beacon node begins to work by its main loop, which involves the following steps:
+Our Ruby Release requires users to start a local gess node running a localized, private blockchain to deploy the **Validator Registration Contract**. This will kickstart the entire beacon chain sync process and listen for registrations of validators in the main chain VRC. The beacon node begins to work by its main loop, which involves the following steps:
 
 1.  _**Sync to the latest block header on the beacon chain:**_ the node will begin a sync process for the beacon chain
 
@@ -212,7 +212,7 @@ With a sharded network comes sharded state storage. State sync today is difficul
 
 # Acknowledgements
 
-A special thanks for entire [Prysmatic Labs](https://gitter.im/prysmaticlabs/prysm) team for helping put this together and to Ethereum Research (Hsiao-Wei Wang, Vitalik, Justin Drake) for the help and guidance in our approach.
+A special thanks for entire [Prysmatic Labs](https://gitter.im/ovcharovvladimir/Prysm) team for helping put this together and to Ethereum Research (Hsiao-Wei Wang, Vitalik, Justin Drake) for the help and guidance in our approach.
 
 # References
 

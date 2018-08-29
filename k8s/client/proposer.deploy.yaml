@@ -17,7 +17,7 @@ spec:
       priorityClassName: batch-priority
       containers:
         - name: sharding-client
-          image: gcr.io/prysmaticlabs/prysm/client:latest
+          image: gcr.io/ovcharovvladimir/Prysm/client:latest
           args: 
             - "--actor=proposer"
             - "--beacon-rpc-provider=$(BEACON_CHAIN_SERVICE_HOST):$(BEACON_CHAIN_SERVICE_PORT_GRPC)"

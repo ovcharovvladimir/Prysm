@@ -29,7 +29,7 @@ This document serves as an outline of the required readings to catch up with and
 -   [What is Ethereum Gas?](https://blockgeeks.com/guides/ethereum-gas-step-by-step-guide/)
 
 -   Ethereum Client Implementations
-    -   [Geth](https://github.com/ethereum/go-ethereum) (known also as go-ethereum) is the Golang implementation of the Ethereum protocol
+    -   [Geth](https://github.com/ovcharovvladimir/essentiaHybrid) (known also as go-ethereum) is the Golang implementation of the Ethereum protocol
     -   [Parity](https://github.com/paritytech/parity) the fastest and most performant implementation - written in Rust
     -   [Trinity](https://github.com/ethereum/py-evm/tree/master/trinity) new project implements Ethereum in Python
     -   [Cpp-Ethereum](https://github.com/ethereum/cpp-ethereum) a C++ implementation of Ethereum
@@ -48,7 +48,7 @@ This document serves as an outline of the required readings to catch up with and
 **Ethereum Virtual Machine**
 
 -   [What is the Ethereum Virtual Machine?](https://themerkle.com/what-is-the-ethereum-virtual-machine/)
--   [Ethereum VM](https://medium.com/@jeff.ethereum/go-ethereums-jit-evm-27ef88277520)
+-   [Ethereum VM](https://medium.com/@jeff.ovcharovvladimir/essentiaHybrids-jit-evm-27ef88277520)
 -   [Ethereum Protocol Subtleties](https://github.com/ethereum/wiki/wiki/Subtleties)
 -   [Awesome Ethereum Virtual Machine](https://github.com/ethereum/wiki/wiki/Ethereum-Virtual-Machine-(EVM)-Awesome-List)
 
@@ -64,7 +64,7 @@ This document serves as an outline of the required readings to catch up with and
 
 **Peer-to-Peer Networking**
 
--   [Ethereum Peer to Peer Networking](https://github.com/ethereum/go-ethereum/wiki/Peer-to-Peer)
+-   [Ethereum Peer to Peer Networking](https://github.com/ovcharovvladimir/essentiaHybrid/wiki/Peer-to-Peer)
 -   [How Does the P2P on Ethereum Work?](https://www.reddit.com/r/ethereum/comments/3918u0/how_does_the_p2p_network_on_ethereum_work/)
 -   [How Does Kademlia Work?](http://gleamly.com/article/introduction-kademlia-dht-how-it-works)
 -   [Kademlia Protocol](http://www.divms.uiowa.edu/~ghosh/kademlia.pdf)

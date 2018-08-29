@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
+	shardpb "github.com/ovcharovvladimir/Prysm/proto/sharding/p2p/v1"
 )
 
 type testStruct struct{}

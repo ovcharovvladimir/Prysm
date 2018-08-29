@@ -4,10 +4,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/ovcharovvladimir/essentiaHybrid/common"
+	"github.com/ovcharovvladimir/Prysm/beacon-chain/params"
+	"github.com/ovcharovvladimir/Prysm/beacon-chain/utils"
+	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/p2p/v1"
 )
 
 func TestGetIndicesForHeight(t *testing.T) {

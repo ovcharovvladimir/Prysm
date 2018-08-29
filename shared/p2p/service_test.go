@@ -8,14 +8,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/event"
+	"github.com/ovcharovvladimir/essentiaHybrid/event"
 	"github.com/golang/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/ovcharovvladimir/Prysm/shared"
 
 	floodsub "github.com/libp2p/go-floodsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	bhost "github.com/libp2p/go-libp2p/p2p/host/basic"
-	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
+	shardpb "github.com/ovcharovvladimir/Prysm/proto/sharding/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
 

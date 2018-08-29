@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/ovcharovvladimir/essentiaHybrid"
+	"github.com/ovcharovvladimir/essentiaHybrid/common"
+	gethTypes "github.com/ovcharovvladimir/essentiaHybrid/core/types"
+	"github.com/ovcharovvladimir/essentiaHybrid/event"
+	"github.com/ovcharovvladimir/Prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -53,7 +53,7 @@ func TestNewWeb3Service(t *testing.T) {
 	if _, err := NewWeb3Service(ctx, &Web3ServiceConfig{endpoint, "", common.Address{}}, nil, &goodReader{}, &goodLogger{}); err != nil {
 		t.Errorf("passing in as ws endpoint should not throw error, received %v", err)
 	}
-	endpoint = "ipc://geth.ipc"
+	endpoint = "ipc://gess.ipc"
 	if _, err := NewWeb3Service(ctx, &Web3ServiceConfig{endpoint, "", common.Address{}}, nil, &goodReader{}, &goodLogger{}); err != nil {
 		t.Errorf("passing in an ipc endpoint should not throw error, received %v", err)
 	}

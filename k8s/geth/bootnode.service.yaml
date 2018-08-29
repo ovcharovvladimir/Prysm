@@ -1,11 +1,11 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: geth-bootnode
+  name: gess-bootnode
 spec:
   selector:
     component: bootnode
-    universe: geth
+    universe: gess
   ports:
     - port: 8545
       targetPort: 8545

@@ -1,14 +1,14 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: geth-bootnode
+  name: gess-bootnode
 spec:
   replicas: 1
   template:
     metadata:
       labels:
         component: bootnode
-        universe: geth
+        universe: gess
     spec:
       priorityClassName: production-priority
       containers:
@@ -44,4 +44,4 @@ spec:
       volumes:
         - name: secrets
           secret:
-            secretName: geth-bootnode-secret
+            secretName: gess-bootnode-secret

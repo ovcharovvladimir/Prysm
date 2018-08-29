@@ -16,7 +16,7 @@ minikube start --kubernetes-version=v1.11.0 --cpus 4
 
 ### Geth's Genesis file
 
-This file is the default provided by geth-genesis secret. 
+This file is the default provided by gess-genesis secret. 
 
 ```json
 {                                                                               
@@ -43,7 +43,7 @@ The private key for the allocation above is:
 
 NOTE: Obviously, do not use this wallet key for anything with real money on it!
 
-To update the genesis secret, change value in geth/genesis.secret.yaml to the
+To update the genesis secret, change value in gess/genesis.secret.yaml to the
 base64 encoded string for the genesis.json.
 
 Example:
@@ -54,10 +54,10 @@ cat /tmp/genesis.json | json-minify | base64
 
 ### Deploying Geth Mainchain
 
-First, launch the bootnode so that geth nodes can discover each other.
+First, launch the bootnode so that gess nodes can discover each other.
 
 ```bash
-bazel run //k8s/geth:bootnode.deploy.apply
+bazel run //k8s/gess:bootnode.deploy.apply
 ```
 
 Then launch everything else.
@@ -83,7 +83,7 @@ registration contract.
 
 ```bash
 # get the address the node service
-minikube service geth-nodes --url
+minikube service gess-nodes --url
 ```
 
 Example response:
@@ -134,13 +134,13 @@ bazel run //k8s/client:everything.apply
 Check out the ethstats dashboard by querying minikube for the service URL.
 
 ```bash
-minikube service geth-ethstats --url
+minikube service gess-ethstats --url
 ```
 
-Accessing the geth nodes.
+Accessing the gess nodes.
 
 ```bash
-minikube service geth-nodes --url
+minikube service gess-nodes --url
 
 # Example output
 http://192.168.99.100:30451

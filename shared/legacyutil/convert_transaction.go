@@ -10,7 +10,7 @@ import (
 	gethTypes "github.com/ovcharovvladimir/essentiaHybrid/core/types"
 )
 
-// TransformTransaction of proto transaction to geth's transction.
+// TransformTransaction of proto transaction to gess's transction.
 func TransformTransaction(t *pb.Transaction) *gethTypes.Transaction {
 	return gethTypes.NewTransaction(
 		t.Nonce,

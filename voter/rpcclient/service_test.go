@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/rpc/v1"
+	"github.com/ovcharovvladimir/Prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 

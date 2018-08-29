@@ -3,11 +3,11 @@ package database
 import (
 	"testing"
 
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ovcharovvladimir/essentiaHybrid/essdb"
 )
 
-// Verifies that KVStore implements the ethdb interface.
-var _ = ethdb.Database(&KVStore{})
+// Verifies that KVStore implements the essdb interface.
+var _ = essdb.Database(&KVStore{})
 
 func Test_KVStorePut(t *testing.T) {
 	kv := NewKVStore()
