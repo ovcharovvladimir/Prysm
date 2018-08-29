@@ -38,7 +38,7 @@ func DefaultConfig() *Config {
 	return &Config{AttesterChanBuf: 5, ProposerChanBuf: 5}
 }
 
-// NewBeaconValidator instantiates a service that interacts with a beacon node.
+// NewBeaconVoter instantiates a service that interacts with a beacon node.
 func NewBeaconVoter(ctx context.Context, cfg *Config, rpcClient types.RPCClient) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
