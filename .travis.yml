@@ -11,8 +11,8 @@ matrix:
         - go get -u github.com/alecthomas/gometalinter
         - go get -u github.com/ovcharovvladimir/essentiaHybrid
         - go get -u github.com/x-cray/logrus-prefixed-formatter
-        - go get -u  github.com/multiformats/go-multiaddr
-        - go get -u  github.com/urfave/cli
+        - go get -u github.com/multiformats/go-multiaddr
+        - go get -u github.com/urfave/cli
         - go get -u google.golang.org/grpc
         - go get -u golang.org/x/crypto/blake2b
         - go get -u github.com/libp2p/go-libp2p/
@@ -22,9 +22,10 @@ matrix:
         - go get -u github.com/syndtr/goleveldb/leveldb
         - go get -u github.com/golang/protobuf/proto
         - go get -u github.com/golang/mock/gomock
+        - go get -u  github.com/libp2p/go-testutil
       script:
         - gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
-
+        - make dist
     - language: node_js
       os: linux
       env:
