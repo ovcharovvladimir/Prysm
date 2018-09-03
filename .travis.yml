@@ -33,7 +33,7 @@ matrix:
     provider: releases
     api-key:
     secure: EHIl2IYJtfXNo8JHshd1sgVt8qWmmMYMJlYXfeB6T8YrOscC650GK7tKrxy/JYgeEivDfRgdROIw6F3JSL+BaufB+LMzlG1qDit9Pe/B3LkmhHk5xi1izg+qBGZLlQ3WFc+eRcqnazd2EDliyDCdyKcjZkIETqH1gzSjQHRzhftoYG4xwAayrC40q/Gkhv7LGbKhNrTSOuGC5PmKOFYeP3rxPuwxjLChsTjo+i/RGu9xGzl33A2+FdLHiSZOjQRV2ZpLLvgCmvY8cwRs+IWe7CYxjzWwVmluzjuJxh3SthPa4IzbWuc9OVNEAptSn/ovkr7VO0rzeXjpfX4pQUdhqoQgnhVHSROeXXijHAOs/Bv+RRKnj9qflcX69X2VX1DlvrCBlx98ACc0k1qN62kbrHnSy24LjXM6Qb7TM11I3wj/YoCmEqA5/j11Q8ofPW/RQxNNlqmDO7f461+OdyDfRVPdRAUlXj7pHL5W42KaYeX3PdPE043DqOHw4oRGTmC7MDxPKDyY83qCEm35G1FPym5qw97ERAap+DmPmi9ZvVhyboUsIQ6+pnrfr+obqglDd1TaDcTFtATDMSR5X/YeTqia1iV+Cyo4bwsy/svIcFmWXuyPeuRn5D9f8aw+TSAtrh2GW0u93d23T7Rhy1uKh8BZb1uQSfbtN/hC68+wEZo=
-    file: Prysm.release.$(date +%F).tar.gz
+    file: ${TRAVIS_BUILD_DIR}/build/bin/Prysm.release.$(date +%F).tar.gz
     skip_cleanup: true
     on:
     tags: true
