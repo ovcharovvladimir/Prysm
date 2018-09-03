@@ -1,6 +1,6 @@
 language: go
 go_import_path: github.com/ovcharovvladimir/Prysm
-sudo: false
+sudo: true
 matrix:
   include:
     - os: linux
@@ -8,6 +8,7 @@ matrix:
       env:
         - lint
       before_install:
+        - apt-get install gzip
         - go get -u golang.org/x/crypto/openpgp
         - go get -u github.com/ovcharovvladimir/essentiaHybrid
         - go get -u github.com/Azure/azure-storage-blob-go/2018-03-28/azblob
@@ -29,8 +30,15 @@ matrix:
        # - gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
         - go run build/ci.go install ./beacon-chain
         - go run build/ci.go install ./voter
-        - cd ${TRAVIS_BUILD_DIR}/build/bin
-        - dir 
+        - tar -cv ${TRAVIS_BUILD_DIR}/build/bin | gzip > Prysm.release.$(date +%F).tar.gz
+      deploy:
+        provider: releases
+        api_key: YOUR_API_KEY_ENCRYPTED
+        file: Prysm.release.$(date +%F_%R).tar.gz
+        skip_cleanup: true
+      on:
+        tags: true
+
     - language: node_js
       os: linux
       env:
