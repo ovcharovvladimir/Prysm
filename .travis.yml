@@ -3,50 +3,49 @@ go_import_path: github.com/ovcharovvladimir/Prysm
 sudo: false
 matrix:
   include:
-    - os: linux
-      go: 1.10.x
-      env:
-        - lint
-      before_install:
-        - go get -u golang.org/x/crypto/openpgp
-        - go get -u github.com/ovcharovvladimir/essentiaHybrid
-        - go get -u github.com/Azure/azure-storage-blob-go/2018-03-28/azblob
-        - go get -u github.com/alecthomas/gometalinter
-        - go get -u github.com/x-cray/logrus-prefixed-formatter
-        - go get -u github.com/multiformats/go-multiaddr
-        - go get -u github.com/urfave/cli
-        - go get -u google.golang.org/grpc
-        - go get -u golang.org/x/crypto/blake2b
-        - go get -u github.com/libp2p/go-libp2p/
-        - go get -u github.com/fjl/memsize/memsizeui
-        - go get -u github.com/libp2p/go-floodsub
-        - go get -u github.com/whyrusleeping/mdns
-        - go get -u github.com/syndtr/goleveldb/leveldb
-        - go get -u github.com/golang/protobuf/proto
-        - go get -u github.com/golang/mock/gomock
-        - go get -u  github.com/libp2p/go-testutil
-      script:
-       # - gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
-        - go run build/ci.go install ./beacon-chain
-        - go run build/ci.go install ./voter
-        - tar -cv ${TRAVIS_BUILD_DIR}/build/bin | gzip > Prysm.release.$(date +%F).tar.gz
-      deploy:
+  - os: linux
+    go: 1.10.x
+    env:
+    - lint
+    before_install:
+    - go get -u golang.org/x/crypto/openpgp
+    - go get -u github.com/ovcharovvladimir/essentiaHybrid
+    - go get -u github.com/Azure/azure-storage-blob-go/2018-03-28/azblob
+    - go get -u github.com/alecthomas/gometalinter
+    - go get -u github.com/x-cray/logrus-prefixed-formatter
+    - go get -u github.com/multiformats/go-multiaddr
+    - go get -u github.com/urfave/cli
+    - go get -u google.golang.org/grpc
+    - go get -u golang.org/x/crypto/blake2b
+    - go get -u github.com/libp2p/go-libp2p/
+    - go get -u github.com/fjl/memsize/memsizeui
+    - go get -u github.com/libp2p/go-floodsub
+    - go get -u github.com/whyrusleeping/mdns
+    - go get -u github.com/syndtr/goleveldb/leveldb
+    - go get -u github.com/golang/protobuf/proto
+    - go get -u github.com/golang/mock/gomock
+    - go get -u  github.com/libp2p/go-testutil
+    script:
+    - go run build/ci.go install ./beacon-chain
+    - go run build/ci.go install ./voter
+    - tar -cv ${TRAVIS_BUILD_DIR}/build/bin | gzip > Prysm.release.$(date +%F).tar.gz
+    deploy:
         provider: releases
-        api_key: YOUR_API_KEY_ENCRYPTED
-        file: Prysm.release.$(date +%F_%R).tar.gz
-        skip_cleanup: true
-      on:
-        tags: true
+        api-key:
+            secure: EHIl2IYJtfXNo8JHshd1sgVt8qWmmMYMJlYXfeB6T8YrOscC650GK7tKrxy/JYgeEivDfRgdROIw6F3JSL+BaufB+LMzlG1qDit9Pe/B3LkmhHk5xi1izg+qBGZLlQ3WFc+eRcqnazd2EDliyDCdyKcjZkIETqH1gzSjQHRzhftoYG4xwAayrC40q/Gkhv7LGbKhNrTSOuGC5PmKOFYeP3rxPuwxjLChsTjo+i/RGu9xGzl33A2+FdLHiSZOjQRV2ZpLLvgCmvY8cwRs+IWe7CYxjzWwVmluzjuJxh3SthPa4IzbWuc9OVNEAptSn/ovkr7VO0rzeXjpfX4pQUdhqoQgnhVHSROeXXijHAOs/Bv+RRKnj9qflcX69X2VX1DlvrCBlx98ACc0k1qN62kbrHnSy24LjXM6Qb7TM11I3wj/YoCmEqA5/j11Q8ofPW/RQxNNlqmDO7f461+OdyDfRVPdRAUlXj7pHL5W42KaYeX3PdPE043DqOHw4oRGTmC7MDxPKDyY83qCEm35G1FPym5qw97ERAap+DmPmi9ZvVhyboUsIQ6+pnrfr+obqglDd1TaDcTFtATDMSR5X/YeTqia1iV+Cyo4bwsy/svIcFmWXuyPeuRn5D9f8aw+TSAtrh2GW0u93d23T7Rhy1uKh8BZb1uQSfbtN/hC68+wEZo=
+      file: Prysm.release.$(date +%F).tar.gz
+      skip_cleanup: true
+    on:
+      tags: true
+  - language: node_js
+    os: linux
+    env:
+    - solidity
+    node_js:
+    - lts/*
+    before_install:
+    - npm install -g solium
+    install: false
+    script:
+    - solium -d contracts/
 
-    - language: node_js
-      os: linux
-      env:
-        - solidity
-      node_js:
-        - "lts/*"
-      before_install:
-        - npm install -g solium
-      install: false # Skip npm install.
-      script:
-        # Check solidity linter.
-        - solium -d contracts/
