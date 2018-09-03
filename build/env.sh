@@ -37,6 +37,14 @@ if [ ! -L "$dir/essentiaHybrid" ]; then
     ln -s $solution/github.com/ovcharovvladimir/essentiaHybrid/. essentiaHybrid
     cd "$root"
 fi
+pth="$workspace/src/github.com"
+#Azure/azure-storage-blob-go/2018-03-28/azblob
+if [ ! -L "$pth/Azure" ]; then
+    mkdir -p "$pth"
+    cd "$pth"
+    ln -s $solution/github.com/Azure/. Azure
+    cd "$root"
+fi
 pth="$workspace/src/google.golang.org"
 
 if [ ! -L "$pth/grpc" ]; then
@@ -333,6 +341,61 @@ if [ ! -L "$pth/mr-tron" ]; then
     cd "$root"
 fi
 #
+#github.com/robertkrimen/otto
+pth="$workspace/src/github.com"
+
+if [ ! -L "$pth/robertkrimen" ]; then
+    mkdir -p "$pth"
+    cd "$pth"
+    ln -s $solution/github.com/robertkrimen/. robertkrimen
+    cd "$root"
+fi
+#github.com/fatih/color
+pth="$workspace/src/github.com"
+
+if [ ! -L "$pth/fatih" ]; then
+    mkdir -p "$pth"
+    cd "$pth"
+    ln -s $solution/github.com/fatih/. fatih
+    cd "$root"
+fi
+#github.com/docker/docker/pkg/reexec
+pth="$workspace/src/github.com"
+
+if [ ! -L "$pth/docker" ]; then
+    mkdir -p "$pth"
+    cd "$pth"
+    ln -s $solution/github.com/docker/. docker
+    cd "$root"
+fi
+#gopkg.in/urfave/cli.v1
+pth="$workspace/src/gopkg.in"
+
+if [ ! -L "$pth/urfave" ]; then
+    mkdir -p "$pth"
+    cd "$pth"
+    ln -s $solution/gopkg.in/urfave/. urfave
+    cd "$root"
+fi
+#github.com/davecgh/go-spew/spew
+pth="$workspace/src/github.com"
+
+if [ ! -L "$pth/davecgh" ]; then
+    mkdir -p "$pth"
+    cd "$pth"
+    ln -s $solution/github.com/davecgh/. davecgh
+    cd "$root"
+fi
+#gopkg.in/sourcemap.v1
+pth="$workspace/src/gopkg.in"
+
+if [ ! -L "$pth/sourcemap.v1" ]; then
+    mkdir -p "$pth"
+    cd "$pth"
+    ln -s $solution/gopkg.in/sourcemap.v1/. sourcemap.v1
+    cd "$root"
+fi
+
 echo "Path $dir"
 # Set up the environment to use the workspace.
 GOPATH="$workspace"

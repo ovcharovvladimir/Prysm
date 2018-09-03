@@ -58,9 +58,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ovcharovvladimir/essentiaHybrid/internal/build"
+	"github.com/ovcharovvladimir/Prysm/internal/build"
 	"github.com/ovcharovvladimir/essentiaHybrid/params"
-	sv "github.com/ovcharovvladimir/essentiaHybrid/swarm/version"
+
 )
 
 var (
@@ -101,7 +101,7 @@ var (
 	}
 
 	// Packages to be cross-compiled by the xgo command
-	allCrossCompiledArchiveFiles = append(allToolsArchiveFiles, swarmArchiveFiles...)
+	allCrossCompiledArchiveFiles = append(allToolsArchiveFiles)
 
 	// Distros for which packages are created.
 	// Note: vivid is unsupported because there is no golang-1.6 package for it.
@@ -175,7 +175,7 @@ func doInstall(cmdline []string) {
 
 		if minor < 9 {
 			log.Println("You have Go version", runtime.Version())
-			log.Println("go-ethereum requires at least Go version 1.9 and cannot")
+			log.Println("Project requires at least Go version 1.9 and cannot")
 			log.Println("be compiled with an earlier version. Please upgrade your Go installation.")
 			os.Exit(1)
 		}
@@ -186,7 +186,7 @@ func doInstall(cmdline []string) {
 		packages = flag.Args()
 	}
 	packages = build.ExpandPackagesNoVendor(packages)
-
+    log.Println("ARCH:",arch)
 	if *arch == "" || *arch == runtime.GOARCH {
 		goinstall := goTool("install", buildFlags(env)...)
 		goinstall.Args = append(goinstall.Args, "-v")
@@ -344,7 +344,9 @@ func doArchive(cmdline []string) {
 		signer = flag.String("signer", "", `Environment variable holding the signing key (e.g. LINUX_SIGNING_KEY)`)
 		upload = flag.String("upload", "", `Destination to upload the archives (usually "gethstore/builds")`)
 		ext    string
+		
 	)
+
 	flag.CommandLine.Parse(cmdline)
 	switch *atype {
 	case "zip":
@@ -359,23 +361,18 @@ func doArchive(cmdline []string) {
 		env = build.Env()
 
 		basegeth = archiveBasename(*arch, params.ArchiveVersion(env.Commit))
-		gess     = "gess-" + basegeth + ext
-		alltools = "gess-alltools-" + basegeth + ext
+		gess     = "beacon-" + basegeth + ext
+		alltools = "beacon-alltools-" + basegeth + ext
 
-		baseswarm = archiveBasename(*arch, sv.ArchiveVersion(env.Commit))
-		swarm     = "swarm-" + baseswarm + ext
 	)
 	maybeSkipArchive(env)
 	if err := build.WriteArchive(gess, gethArchiveFiles); err != nil {
 		log.Fatal(err)
 	}
-	if err := build.WriteArchive(alltools, allToolsArchiveFiles); err != nil {
+		if err := build.WriteArchive(alltools, allToolsArchiveFiles); err != nil {
 		log.Fatal(err)
 	}
-	if err := build.WriteArchive(swarm, swarmArchiveFiles); err != nil {
-		log.Fatal(err)
-	}
-	for _, archive := range []string{gess, alltools, swarm} {
+	for _, archive := range []string{gess, alltools} {
 		if err := archiveUpload(archive, *upload, *signer); err != nil {
 			log.Fatal(err)
 		}
@@ -492,7 +489,7 @@ func makeWorkdir(wdflag string) string {
 	if wdflag != "" {
 		err = os.MkdirAll(wdflag, 0744)
 	} else {
-		wdflag, err = ioutil.TempDir("", "gess-build-")
+		wdflag, err = ioutil.TempDir("", "beacon-build-")
 	}
 	if err != nil {
 		log.Fatal(err)

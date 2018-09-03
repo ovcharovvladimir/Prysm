@@ -13,16 +13,17 @@ GO ?= latest
 
 voter:
 	@echo "Voter"
-	build/env.sh go install ./voter
+	build/env.sh go run build/ci.go install ./voter
 	@echo "Done building VOTER."
 	@echo "Run \"$(GOBIN)/voter \" to launch voter."
 beacon:
-	build/env.sh go install ./beacon-chain
+	build/env.sh go run build/ci.go install ./beacon-chain
 	@echo "Done building BEACON-CHAIN."
 	@echo "Run \"$(GOBIN)/beacon-chain\" to launch beacon-chain"
 
 all:
 	build/env.sh go run build/ci.go install
+	@echo "Run \"$(GOBIN)"
 
 
 clean:
@@ -33,6 +34,11 @@ clean:
 # You need to put $GOBIN (or $GOPATH/bin) in your PATH to use 'go generate'.
 
 devtools:
+	env GOBIN= go get -u gopkg.in/urfave/cli.v1
+	env GOBIN= go get -u github.com/robertkrimen/otto
+	env GOBIN= go get -u github.com/fatih/color
+	env GOBIN= go get -u github.com/docker/docker/pkg/reexec
+	env GOBIN= go get -u github.com/Azure/azure-storage-blob-go/2018-03-28/azblob
 	env GOBIN= go get -u github.com/x-cray/logrus-prefixed-formatter
 	env GOBIN= go get -u  github.com/multiformats/go-multiaddr
 	env GOBIN= go get -u  github.com/urfave/cli

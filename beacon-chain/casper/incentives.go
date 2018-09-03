@@ -30,8 +30,8 @@ func CalculateRewards(attestations []*pb.AttestationRecord, validators []*pb.Val
      // Changed
      // Replace parameters 
      // Сoefficient attester 
-	attesterFactor   := attesterDeposits    * 1.25      // Old = 3
-	totalFactor      := uint64(totalDeposit * 3.75)     // Old = 2 
+	attesterFactor   := float64(attesterDeposits)    * 1.25      // Old = 3
+	totalFactor      := float64(totalDeposit) * 3.75    // Old = 2 
 
 
     // Chek conditionl
