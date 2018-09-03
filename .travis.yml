@@ -8,8 +8,10 @@ matrix:
       env:
         - lint
       before_install:
-        - go get -u github.com/alecthomas/gometalinter
+        - go get -u golang.org/x/crypto/openpgp
         - go get -u github.com/ovcharovvladimir/essentiaHybrid
+        - go get -u github.com/Azure/azure-storage-blob-go/2018-03-28/azblob
+        - go get -u github.com/alecthomas/gometalinter
         - go get -u github.com/x-cray/logrus-prefixed-formatter
         - go get -u github.com/multiformats/go-multiaddr
         - go get -u github.com/urfave/cli
@@ -25,8 +27,9 @@ matrix:
         - go get -u  github.com/libp2p/go-testutil
       script:
        # - gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
-        - make beacon
-        - make voter
+        - go run build/ci.go install ./beacon-chain
+        - go run build/ci.go install ./voter
+    - language: node_js
     - language: node_js
       os: linux
       env:
