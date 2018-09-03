@@ -29,6 +29,8 @@ matrix:
        # - gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
         - go run build/ci.go install ./beacon-chain
         - go run build/ci.go install ./voter
+        - cd ${TRAVIS_BUILD_DIR}/build/bin
+        - dir 
     - language: node_js
       os: linux
       env:
