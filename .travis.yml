@@ -30,7 +30,6 @@ matrix:
         - go run build/ci.go install ./beacon-chain
         - go run build/ci.go install ./voter
     - language: node_js
-    - language: node_js
       os: linux
       env:
         - solidity
