@@ -14,10 +14,10 @@ go run deployVRC.go --privKey 8a6db3b30934439c9f71f1fa777019810fd538c9c1e396809b
 INFO[0039] New contract deployed at 0x559eDab2b5896C2Bc37951325666ed08CD41099d
 ```
 
-### Step 2: Launch beacon chain node
-Launch beacon chain node with account holder's public key and the VRC address we just deployed
+### Step 2: Launch beacon chain nodeccount holder's publi
+Launch beacon chain node with ac key and the VRC address we just deployed
 ```
-./bazel-bin/path/to/your/beacon-chain/binary --vrcaddr 0x527580dd995c0ab81d01f9993eb39166796877a1 --pubkey aaace816cdab194b4bc6c0de3575ccf917a9b9ecfead263720968e0e1b45739c
+./bazel-nbin/path/to/your/beacon-chain/binary --vrcaddr 0x527580dd995c0ab81d01f9993eb39166796877a1 --pubkey aaace816cdab194b4bc6c0de3575ccf917a9b9ecfead263720968e0e1b45739c
 
 ```
 

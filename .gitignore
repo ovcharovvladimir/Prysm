@@ -15,3 +15,11 @@ build/_workspace
 /src
 
 \.directory
+
+build/bin/
+
+voter/voter
+
+beacon-chain/beacon-chain
+
+*.debug

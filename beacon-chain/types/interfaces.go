@@ -66,6 +66,7 @@ type POWChainService interface {
 
 // Reader defines a struct that can fetch latest header events from a web3 endpoint.
 type Reader interface {
+    
 	SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (essentia.Subscription, error)
 }
 

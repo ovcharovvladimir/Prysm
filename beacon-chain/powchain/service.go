@@ -7,10 +7,10 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/ovcharovvladimir/Prysm/beacon-chain/types"
 	"github.com/ovcharovvladimir/essentiaHybrid"
 	"github.com/ovcharovvladimir/essentiaHybrid/common"
 	gethTypes "github.com/ovcharovvladimir/essentiaHybrid/core/types"
-	"github.com/ovcharovvladimir/Prysm/beacon-chain/types"
 	"github.com/sirupsen/logrus"
 )
 
