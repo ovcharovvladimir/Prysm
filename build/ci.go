@@ -60,7 +60,6 @@ import (
 
 	"github.com/ovcharovvladimir/Prysm/internal/build"
 	"github.com/ovcharovvladimir/essentiaHybrid/params"
-
 )
 
 var (
@@ -184,9 +183,10 @@ func doInstall(cmdline []string) {
 	packages := []string{"./..."}
 	if flag.NArg() > 0 {
 		packages = flag.Args()
+
 	}
 	packages = build.ExpandPackagesNoVendor(packages)
-    log.Println("ARCH:",arch)
+	log.Println("ARCH:", arch)
 	if *arch == "" || *arch == runtime.GOARCH {
 		goinstall := goTool("install", buildFlags(env)...)
 		goinstall.Args = append(goinstall.Args, "-v")
@@ -212,7 +212,9 @@ func doInstall(cmdline []string) {
 		for _, cmd := range cmds {
 			pkgs, err := parser.ParseDir(token.NewFileSet(), filepath.Join(".", "cmd", cmd.Name()), nil, parser.PackageClauseOnly)
 			if err != nil {
+
 				log.Fatal(err)
+
 			}
 			for name := range pkgs {
 				if name == "main" {
@@ -344,7 +346,6 @@ func doArchive(cmdline []string) {
 		signer = flag.String("signer", "", `Environment variable holding the signing key (e.g. LINUX_SIGNING_KEY)`)
 		upload = flag.String("upload", "", `Destination to upload the archives (usually "gethstore/builds")`)
 		ext    string
-		
 	)
 
 	flag.CommandLine.Parse(cmdline)
@@ -363,13 +364,12 @@ func doArchive(cmdline []string) {
 		basegeth = archiveBasename(*arch, params.ArchiveVersion(env.Commit))
 		gess     = "beacon-" + basegeth + ext
 		alltools = "beacon-alltools-" + basegeth + ext
-
 	)
 	maybeSkipArchive(env)
 	if err := build.WriteArchive(gess, gethArchiveFiles); err != nil {
 		log.Fatal(err)
 	}
-		if err := build.WriteArchive(alltools, allToolsArchiveFiles); err != nil {
+	if err := build.WriteArchive(alltools, allToolsArchiveFiles); err != nil {
 		log.Fatal(err)
 	}
 	for _, archive := range []string{gess, alltools} {

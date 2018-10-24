@@ -27,7 +27,6 @@ type DBConfig struct {
 // NewDB initializes a beaconDB instance.
 func NewDB(config *DBConfig) (*DB, error) {
 	// Uses default cache and handles values.
-	// TODO: allow these arguments to be set based on cli context.
 	db := &DB{}
 	if config.InMemory {
 		db._db = NewKVStore()
@@ -49,7 +48,7 @@ func (b *DB) Close() {
 	b._db.Close()
 }
 
-// DB returns the attached essdb instance.
+// DB returns the attached ethdb instance.
 func (b *DB) DB() essdb.Database {
 	return b._db
 }

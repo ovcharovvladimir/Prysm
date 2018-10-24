@@ -5,12 +5,12 @@ import (
 
 	"math/big"
 
-	"github.com/ovcharovvladimir/essentiaHybrid/common"
-	gessTypes "github.com/ovcharovvladimir/essentiaHybrid/core/types"
-	"github.com/ovcharovvladimir/essentiaHybrid/crypto/sha3"
-	"github.com/ovcharovvladimir/essentiaHybrid/rlp"
-	"github.com/ovcharovvladimir/Prysm/shared"
+	"github.com/ovcharovvladimir/Prysm/shared/hashutil"
+	"github.com/ovcharovvladimir/Prysm/shared/shardutil"
 	"github.com/ovcharovvladimir/Prysm/voter/params"
+	"github.com/ovcharovvladimir/essentiaHybrid/common"
+	gethTypes "github.com/ovcharovvladimir/essentiaHybrid/core/types"
+	"github.com/ovcharovvladimir/essentiaHybrid/rlp"
 )
 
 // Collation defines a base struct that serves as a primitive equivalent of a "block"
@@ -24,7 +24,7 @@ type Collation struct {
 	// collation's body. Every time this transactions slice is updated, the serialized
 	// body would need to be recalculated. This will be a useful property for proposers
 	// in our system.
-	transactions []*gessTypes.Transaction
+	transactions []*gethTypes.Transaction
 }
 
 // CollationHeader base struct.
@@ -45,7 +45,7 @@ type collationHeaderData struct {
 
 // NewCollation initializes a collation and leaves it up to validators to serialize, deserialize
 // and provide the body and transactions upon creation.
-func NewCollation(header *CollationHeader, body []byte, transactions []*gessTypes.Transaction) *Collation {
+func NewCollation(header *CollationHeader, body []byte, transactions []*gethTypes.Transaction) *Collation {
 	return &Collation{
 		header:       header,
 		body:         body,
@@ -65,16 +65,13 @@ func NewCollationHeader(shardID *big.Int, chunkRoot *common.Hash, period *big.In
 	return &CollationHeader{data: data}
 }
 
-// Hash takes the keccak256 of the collation header's data contents.
+// Hash takes the blake2b of the collation header's data contents.
 func (h *CollationHeader) Hash() (hash common.Hash) {
-	hw := sha3.NewKeccak256()
-
-	if err := rlp.Encode(hw, h.data); err != nil {
+	encoded, err := rlp.EncodeToBytes(h.data)
+	if err != nil {
 		log.Errorf("Failed to RLP encode data: %v", err)
 	}
-
-	hw.Sum(hash[:0])
-	return hash
+	return hashutil.Hash(encoded)
 }
 
 // AddSig adds the signature of proposer after collationHeader gets signed.
@@ -111,7 +108,7 @@ func (c *Collation) Header() *CollationHeader { return c.header }
 func (c *Collation) Body() []byte { return c.body }
 
 // Transactions returns an array of tx's in the collation.
-func (c *Collation) Transactions() []*gessTypes.Transaction { return c.transactions }
+func (c *Collation) Transactions() []*gethTypes.Transaction { return c.transactions }
 
 // ProposerAddress is the coinbase addr of the creator for the collation.
 func (c *Collation) ProposerAddress() *common.Address {
@@ -121,7 +118,7 @@ func (c *Collation) ProposerAddress() *common.Address {
 // CalculateChunkRoot updates the collation header's chunk root based on the body.
 func (c *Collation) CalculateChunkRoot() {
 	chunks := BytesToChunks(c.body)          // wrapper allowing us to merklizing the chunks.
-	chunkRoot := gessTypes.DeriveSha(chunks) // merklize the serialized blobs.
+	chunkRoot := gethTypes.DeriveSha(chunks) // merklize the serialized blobs.
 	c.header.data.ChunkRoot = &chunkRoot
 }
 
@@ -131,7 +128,6 @@ func (c *Collation) CalculateChunkRoot() {
 func (c *Collation) CalculatePOC(salt []byte) common.Hash {
 	body := make([]byte, 0, len(c.body)*(1+len(salt)))
 
-	// TODO: Use 32 byte chunks instead of a single byte
 	for _, chunk := range c.body {
 		body = append(append(body, salt...), chunk)
 	}
@@ -139,7 +135,7 @@ func (c *Collation) CalculatePOC(salt []byte) common.Hash {
 		body = salt
 	}
 	chunks := BytesToChunks(body)      // wrapper allowing us to merklizing the chunks.
-	return gessTypes.DeriveSha(chunks) // merklize the serialized blobs.
+	return gethTypes.DeriveSha(chunks) // merklize the serialized blobs.
 }
 
 // BytesToChunks takes the collation body bytes and wraps it into type Chunks,
@@ -149,11 +145,11 @@ func BytesToChunks(body []byte) Chunks {
 }
 
 // convertTxToRawBlob transactions into RawBlobs. This step encodes transactions uses RLP encoding
-func convertTxToRawBlob(txs []*gessTypes.Transaction) ([]*shared.RawBlob, error) {
-	blobs := make([]*shared.RawBlob, len(txs))
+func convertTxToRawBlob(txs []*gethTypes.Transaction) ([]*shardutil.RawBlob, error) {
+	blobs := make([]*shardutil.RawBlob, len(txs))
 	for i := 0; i < len(txs); i++ {
 		err := error(nil)
-		blobs[i], err = shared.NewRawBlob(txs[i], false)
+		blobs[i], err = shardutil.NewRawBlob(txs[i], false)
 		if err != nil {
 			return nil, err
 		}
@@ -162,13 +158,13 @@ func convertTxToRawBlob(txs []*gessTypes.Transaction) ([]*shared.RawBlob, error)
 }
 
 // SerializeTxToBlob converts transactions using two steps. First performs RLP encoding, and then blob encoding.
-func SerializeTxToBlob(txs []*gessTypes.Transaction) ([]byte, error) {
+func SerializeTxToBlob(txs []*gethTypes.Transaction) ([]byte, error) {
 	blobs, err := convertTxToRawBlob(txs)
 	if err != nil {
 		return nil, err
 	}
 
-	serializedTx, err := shared.Serialize(blobs)
+	serializedTx, err := shardutil.Serialize(blobs)
 	if err != nil {
 		return nil, err
 	}
@@ -182,13 +178,13 @@ func SerializeTxToBlob(txs []*gessTypes.Transaction) ([]byte, error) {
 }
 
 // convertRawBlobToTx converts raw blobs back to their original transactions.
-func convertRawBlobToTx(rawBlobs []shared.RawBlob) ([]*gessTypes.Transaction, error) {
-	blobs := make([]*gessTypes.Transaction, len(rawBlobs))
+func convertRawBlobToTx(rawBlobs []shardutil.RawBlob) ([]*gethTypes.Transaction, error) {
+	blobs := make([]*gethTypes.Transaction, len(rawBlobs))
 
 	for i := 0; i < len(rawBlobs); i++ {
-		blobs[i] = gessTypes.NewTransaction(0, common.HexToAddress("0x"), nil, 0, nil, nil)
+		blobs[i] = gethTypes.NewTransaction(0, common.HexToAddress("0x"), nil, 0, nil, nil)
 
-		err := shared.ConvertFromRawBlob(&rawBlobs[i], blobs[i])
+		err := shardutil.ConvertFromRawBlob(&rawBlobs[i], blobs[i])
 		if err != nil {
 			return nil, fmt.Errorf("creation of transactions from raw blobs failed: %v", err)
 		}
@@ -198,8 +194,8 @@ func convertRawBlobToTx(rawBlobs []shared.RawBlob) ([]*gessTypes.Transaction, er
 
 // DeserializeBlobToTx takes byte array blob and converts it back
 // to original txs and returns the txs in tx array.
-func DeserializeBlobToTx(serialisedBlob []byte) (*[]*gessTypes.Transaction, error) {
-	deserializedBlobs, err := shared.Deserialize(serialisedBlob)
+func DeserializeBlobToTx(serialisedBlob []byte) (*[]*gethTypes.Transaction, error) {
+	deserializedBlobs, err := shardutil.Deserialize(serialisedBlob)
 	if err != nil {
 		return nil, err
 	}

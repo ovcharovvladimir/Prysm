@@ -1,4 +1,4 @@
-# Kubernetes 
+# Kubernetes Configuration for Ethereum 2.0
 
 ## Requirements
 
@@ -16,7 +16,7 @@ minikube start --kubernetes-version=v1.11.0 --cpus 4
 
 ### Geth's Genesis file
 
-This file is the default provided by gess-genesis secret. 
+This file is the default provided by geth-genesis secret. 
 
 ```json
 {                                                                               
@@ -43,7 +43,7 @@ The private key for the allocation above is:
 
 NOTE: Obviously, do not use this wallet key for anything with real money on it!
 
-To update the genesis secret, change value in gess/genesis.secret.yaml to the
+To update the genesis secret, change value in geth/genesis.secret.yaml to the
 base64 encoded string for the genesis.json.
 
 Example:
@@ -54,10 +54,10 @@ cat /tmp/genesis.json | json-minify | base64
 
 ### Deploying Geth Mainchain
 
-First, launch the bootnode so that gess nodes can discover each other.
+First, launch the bootnode so that geth nodes can discover each other.
 
 ```bash
-bazel run //k8s/gess:bootnode.deploy.apply
+bazel run //k8s/geth:bootnode.deploy.apply
 ```
 
 Then launch everything else.
@@ -78,12 +78,12 @@ deployment yaml.
 
 TODO: This process is currently manual and needs to be improved!
 
-Using the private key above and the deployVRC tool, deploy the voter
+Using the private key above and the deployVRC tool, deploy the validator
 registration contract.
 
 ```bash
 # get the address the node service
-minikube service gess-nodes --url
+minikube service geth-nodes --url
 ```
 
 Example response:
@@ -96,7 +96,7 @@ http://192.168.99.100:31745
 Using the first port provided (RPC). Run the deploy VRC tool
 
 ```
-bazel run //contracts/voter-registration-contract/deployVRC --\
+bazel run //contracts/validator-registration-contract/deployVRC --\
   --privKey=783da8ef5343c3019748506305d400bca8c324a5819f3a7f7fbf0c0a0d799b09 \
   --httpPath=http://192.168.99.100:30051
 ```
@@ -134,13 +134,13 @@ bazel run //k8s/client:everything.apply
 Check out the ethstats dashboard by querying minikube for the service URL.
 
 ```bash
-minikube service gess-ethstats --url
+minikube service geth-ethstats --url
 ```
 
-Accessing the gess nodes.
+Accessing the geth nodes.
 
 ```bash
-minikube service gess-nodes --url
+minikube service geth-nodes --url
 
 # Example output
 http://192.168.99.100:30451

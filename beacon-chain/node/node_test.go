@@ -12,26 +12,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-// Test that the beacon chain observer node can build with default flag values.
-func TestNodeObserver_Builds(t *testing.T) {
-	app := cli.NewApp()
-	set := flag.NewFlagSet("test", 0)
-	set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
-	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
-	set.String("datadir", tmp, "node data directory")
-	set.Bool("simulator", true, "want to be a simulator?")
-
-	context := cli.NewContext(app, set, nil)
-
-	_, err := NewBeaconNode(context)
-	if err != nil {
-		t.Fatalf("Failed to create BeaconNode: %v", err)
-	}
-
-	os.RemoveAll(tmp)
-}
-
-// Test that the beacon chain voter node build fails without PoW service.
+// Test that the beacon chain validator node build fails without PoW service.
 func TestNodeValidator_Builds(t *testing.T) {
 	if os.Getenv("TEST_NODE_PANIC") == "1" {
 		app := cli.NewApp()
@@ -39,7 +20,7 @@ func TestNodeValidator_Builds(t *testing.T) {
 		set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
 		tmp := fmt.Sprintf("%s/datadir", os.TempDir())
 		set.String("datadir", tmp, "node data directory")
-		set.Bool("voter", true, "want to be a voter?")
+		set.Bool("enable-powchain", true, "enable powchain")
 
 		context := cli.NewContext(app, set, nil)
 
@@ -60,26 +41,6 @@ func TestNodeValidator_Builds(t *testing.T) {
 	}
 }
 
-// Test that beacon chain node can start.
-func TestNodeStart(t *testing.T) {
-	app := cli.NewApp()
-	set := flag.NewFlagSet("test", 0)
-	set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
-	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
-	set.String("datadir", tmp, "node data directory")
-	set.Bool("simulator", true, "want to be a simulator?")
-
-	context := cli.NewContext(app, set, nil)
-
-	node, err := NewBeaconNode(context)
-	if err != nil {
-		t.Fatalf("Failed to create BeaconNode: %v", err)
-	}
-
-	go node.Start()
-	os.RemoveAll(tmp)
-}
-
 // Test that beacon chain node can close.
 func TestNodeClose(t *testing.T) {
 	hook := logTest.NewGlobal()
@@ -88,6 +49,8 @@ func TestNodeClose(t *testing.T) {
 	set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
 	tmp := fmt.Sprintf("%s/datadir", os.TempDir())
 	set.String("datadir", tmp, "node data directory")
+	set.Bool("enable-powchain", false, "no powchain service")
+	set.Bool("demo-config", true, "demo configuration")
 
 	context := cli.NewContext(app, set, nil)
 

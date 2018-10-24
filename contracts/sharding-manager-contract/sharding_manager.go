@@ -12,7 +12,7 @@ import (
 	"github.com/ovcharovvladimir/essentiaHybrid/accounts/abi/bind"
 	"github.com/ovcharovvladimir/essentiaHybrid/common"
 	"github.com/ovcharovvladimir/essentiaHybrid/core/types"
-	"github.com/ovcharovvladimir/essentiaHybrid/event"
+	"github.com/ovcharovvladimir/Prysm/shared/event"
 )
 
 // SMCABI is the input ABI used to generate the binding from.

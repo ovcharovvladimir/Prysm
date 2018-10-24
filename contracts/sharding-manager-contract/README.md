@@ -8,5 +8,5 @@ the number of shards realistically could only grow as much as SMC could handle.
 
 In the current approach, SMC was deprecated for beacon chain that has links to the main chain by containing hashes of canonical main chain blocks
 within its own block construction. Check out our [design doc](https://docs.google.com/document/d/1lTDUy6JwRGNE4rDKiyzaV-lxhG2SZ2F6wCthM-QCSFQ/edit?usp=sharing)
-which summarizes our thoughts for replacing SMC with a minimal viable beacon chain and merge aspects of our current work in gess-sharding into this
+which summarizes our thoughts for replacing SMC with a minimal viable beacon chain and merge aspects of our current work in geth-sharding into this
 new beacon chain that we can use for demonstration purposes.

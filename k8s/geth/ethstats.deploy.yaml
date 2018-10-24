@@ -1,18 +1,18 @@
 kind: Deployment
 apiVersion: apps/v1beta1
 metadata:
-  name: gess-ethstats
+  name: geth-ethstats
 spec:
   replicas: 1
   selector:
     matchLabels:
       component: ethstats
-      universe: gess
+      universe: geth
   template:
     metadata:
       labels:
         component: ethstats
-        universe: gess
+        universe: geth
     spec:
       priorityClassName: production-priority
       containers:

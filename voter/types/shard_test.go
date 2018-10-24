@@ -8,10 +8,10 @@ import (
 
 	"github.com/ovcharovvladimir/essentiaHybrid/common"
 	gethTypes "github.com/ovcharovvladimir/essentiaHybrid/core/types"
-	"github.com/ovcharovvladimir/essentiaHybrid/crypto/sha3"
-	"github.com/ovcharovvladimir/essentiaHybrid/essdb"
+	"github.com/ovcharovvladimir/essentiaHybrid/ethdb"
 	"github.com/ovcharovvladimir/essentiaHybrid/rlp"
 	sharedDB "github.com/ovcharovvladimir/Prysm/shared/database"
+	"github.com/ovcharovvladimir/Prysm/shared/hashutil"
 )
 
 type mockShardDB struct {
@@ -37,17 +37,19 @@ func (m *mockShardDB) Delete(k []byte) error {
 func (m *mockShardDB) Close() {
 }
 
-func (m *mockShardDB) NewBatch() essdb.Batch {
+func (m *mockShardDB) NewBatch() ethdb.Batch {
 	return nil
 }
 
 // Hash returns the hash of a collation's entire contents. Useful for comparison tests.
-func (c *Collation) Hash() (hash common.Hash) {
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, c)
-	hw.Sum(hash[:0])
-	return hash
+func (c *Collation) Hash() common.Hash {
+	encoded, err := rlp.EncodeToBytes(c)
+	if err != nil {
+		log.Errorf("Failed to RLP encode data: %v", err)
+	}
+	return hashutil.Hash(encoded)
 }
+
 func TestShard_ValidateShardID(t *testing.T) {
 	emptyHash := common.BytesToHash([]byte{})
 	emptyAddr := common.BytesToAddress([]byte{})

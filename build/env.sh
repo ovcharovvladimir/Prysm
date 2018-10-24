@@ -6,7 +6,6 @@ if [ ! -f "build/env.sh" ]; then
     echo "$0 must be run from the root of the repository."
     exit 2
 fi
-
 # Create fake Go workspace if it doesn't exist yet.
 workspace="$PWD/build/_workspace"
 if [[ $PWD = *"travis"* ]];
@@ -395,6 +394,62 @@ if [ ! -L "$pth/sourcemap.v1" ]; then
     ln -s $solution/gopkg.in/sourcemap.v1/. sourcemap.v1
     cd "$root"
 fi
+#github.com/steakknife/hamming
+pth="$workspace/src/github.com"
+
+if [ ! -L "$pth/steakknife" ]; then
+    mkdir -p "$pth"
+    cd "$pth"
+    ln -s $solution/github.com/steakknife/. steakknife
+   cd "$root"
+fi
+#google.golang.org/api/support/bundler
+pth="$workspace/src/google.golang.org"
+
+if [ ! -L "$pth/api" ]; then
+    mkdir -p "$pth"
+    cd "$pth"
+   ln -s $solution/google.golang.org/api/. api
+   cd "$root"
+fi
+#github.com/aristanetworks/goarista/monotime
+pth="$workspace/src/github.com"
+
+if [ ! -L "$pth/aristanetworks" ]; then
+    mkdir -p "$pth"
+    cd "$pth"
+   ln -s $solution/github.com/aristanetworks/. aristanetworks
+   cd "$root"
+fi
+#github.com/boltdb/bolt
+pth="$workspace/src/github.com"
+
+if [ ! -L "$pth/boltdb" ]; then
+    mkdir -p "$pth"
+    cd "$pth"
+   ln -s $solution/github.com/boltdb/. boltdb
+   cd "$root"
+fi
+#git.apache.org/thrift.git/lib/go/thrift
+pth="$workspace/src/git.apache.org"
+
+if [ ! -L "$pth/thrift.git" ]; then
+    mkdir -p "$pth"
+    cd "$pth"
+   ln -s $solution/git.apache.org/thrift.git/. thrift.git
+   cd "$root"
+fi
+
+#go.opencensus.io/exporter/jaeger
+pth="$workspace/src/go.opencensus.io"
+
+if [ ! -L "$pth" ]; then
+  # mkdir -p "$pth"
+   cd $workspace/src
+  ln -s $solution/go.opencensus.io/. go.opencensus.io
+  cd "$root"
+fi
+
 
 echo "Path $dir"
 # Set up the environment to use the workspace.

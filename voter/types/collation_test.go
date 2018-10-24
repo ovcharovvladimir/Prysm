@@ -9,7 +9,7 @@ import (
 
 	"github.com/ovcharovvladimir/essentiaHybrid/common"
 	gethTypes "github.com/ovcharovvladimir/essentiaHybrid/core/types"
-	"github.com/ovcharovvladimir/Prysm/shared"
+	"github.com/ovcharovvladimir/Prysm/shared/shardutil"
 )
 
 func TestCollation_Transactions(t *testing.T) {
@@ -31,9 +31,7 @@ func TestCollation_Transactions(t *testing.T) {
 	}
 }
 
-//TODO: Add test for converting *gethTypes.Transaction into raw blobs
-
-//Tests that Transactions can be serialised
+// Tests that Transactions can be serialised
 func TestSerialize_Deserialize(t *testing.T) {
 
 	header := NewCollationHeader(big.NewInt(1), nil, big.NewInt(1), nil, [32]byte{})
@@ -197,9 +195,9 @@ func runSerializeNoRLPBenchmark(b *testing.B, numTransactions int) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, err := shared.Serialize(blobs)
+		_, err := shardutil.Serialize(blobs)
 		if err != nil {
-			b.Errorf("shared.Serialize failed: %v", err)
+			b.Errorf("shardutil.Serialize failed: %v", err)
 		}
 	}
 }
@@ -233,9 +231,9 @@ func runDeserializeNoRLPBenchmark(b *testing.B, numTransactions int) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, err := shared.Deserialize(blob)
+		_, err := shardutil.Deserialize(blob)
 		if err != nil {
-			b.Errorf("shared.Deserialize failed: %v", err)
+			b.Errorf("shardutil.Deserialize failed: %v", err)
 		}
 	}
 }

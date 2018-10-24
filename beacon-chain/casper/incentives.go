@@ -1,55 +1,108 @@
 package casper
 
 import (
+	"github.com/ovcharovvladimir/Prysm/beacon-chain/params"
 	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/p2p/v1"
-	   "github.com/ovcharovvladimir/Prysm/beacon-chain/params"
-	   "github.com/ovcharovvladimir/Prysm/beacon-chain/utils"
-   	   "github.com/sirupsen/logrus"
+	"github.com/ovcharovvladimir/Prysm/shared/mathutil"
+	"github.com/sirupsen/logrus"
 )
+
 var log = logrus.WithField("prefix", "casper")
 
-// 
-// CalculateRewards adjusts validators 
-// balances by applying rewards or penalties
+// CalculateRewards adjusts validators balances by applying rewards or penalties
 // based on FFG incentive structure.
-// 
-// Changed : AS
-// Date    : 31.09.2018 16:20
-// Title   : Calculate Rewards
-// Note    : 
-// Note    : Changed coefficient
-// Descr.  : 1.25 = 25% (attester factor)
-//           3.75 = 75% (total factor)
-// TODO    : Waiting test
-// 
-func CalculateRewards(attestations []*pb.AttestationRecord, validators []*pb.ValidatorRecord, dynasty uint64, totalDeposit uint64) ([]*pb.ValidatorRecord, error) {
-	
-	activeValidators := ActiveValidatorIndices(validators, dynasty)
-	attesterDeposits := GetAttestersTotalDeposit(attestations)
+// FFG Rewards scheme rewards validator who have voted on blocks, and penalises those validators
+// who are offline. The penalties are more severe the longer they are offline.
+func CalculateRewards(
+	slot uint64,
+	voterIndices []uint32,
+	validators []*pb.ValidatorRecord,
+	totalParticipatedDeposit uint64,
+	timeSinceFinality uint64) []*pb.ValidatorRecord {
+	totalDeposit := TotalActiveValidatorDeposit(validators)
+	activeValidators := ActiveValidatorIndices(validators)
+	rewardQuotient := RewardQuotient(validators)
+	penaltyQuotient := quadraticPenaltyQuotient()
 
-     // Changed
-     // Replace parameters 
-     // Сoefficient attester 
-	attesterFactor   := float64(attesterDeposits)    * 1.25      // Old = 3
-	totalFactor      := float64(totalDeposit) * 3.75    // Old = 2 
+	log.Debugf("Applying rewards and penalties for the validators for slot %d", slot)
+	if timeSinceFinality <= 3*params.GetConfig().CycleLength {
+		for _, validatorIndex := range activeValidators {
+			var voted bool
 
+			for _, voterIndex := range voterIndices {
+				if voterIndex == validatorIndex {
+					voted = true
+					balance := validators[validatorIndex].GetBalance()
+					newbalance := int64(balance) + int64(balance/rewardQuotient)*(2*int64(totalParticipatedDeposit)-int64(totalDeposit))/int64(totalDeposit)
+					validators[validatorIndex].Balance = uint64(newbalance)
+					break
+				}
+			}
 
-    // Chek conditionl
-    // Old  conditional (<=)
-    // TODO: Need test
-	if attesterFactor >= totalFactor {
-	   log.Debug("Applying rewards or penalties for the validators from last cycle.")
-	   
-	   for i, attesterIndex := range activeValidators {
-		          voted := utils.CheckBit(attestations[len(attestations)-1].AttesterBitfield, int(attesterIndex))
-		
-			  if voted {
-			     validators[i].Balance += params.AttesterReward
-			  }  else {
-			     validators[i].Balance -= params.AttesterReward
-			  }
+			if !voted {
+				newBalance := validators[validatorIndex].GetBalance()
+				newBalance -= newBalance / rewardQuotient
+				validators[validatorIndex].Balance = newBalance
+			}
 		}
+
+	} else {
+		for _, validatorIndex := range activeValidators {
+			var voted bool
+
+			for _, voterIndex := range voterIndices {
+				if voterIndex == validatorIndex {
+					voted = true
+					break
+				}
+			}
+
+			if !voted {
+				newBalance := validators[validatorIndex].GetBalance()
+				newBalance -= newBalance/rewardQuotient + newBalance*timeSinceFinality/penaltyQuotient
+				validators[validatorIndex].Balance = newBalance
+			}
+		}
+
 	}
 
-	return validators, nil
+	return validators
+}
+
+// RewardQuotient returns the reward quotient for validators which will be used to
+// reward validators for voting on blocks, or penalise them for being offline.
+func RewardQuotient(validators []*pb.ValidatorRecord) uint64 {
+	totalDepositETH := TotalActiveValidatorDepositInEth(validators)
+	return params.GetConfig().BaseRewardQuotient * mathutil.IntegerSquareRoot(totalDepositETH)
+}
+
+// quadraticPenaltyQuotient is the quotient that will be used to apply penalties to offline
+// validators.
+func quadraticPenaltyQuotient() uint64 {
+	dropTimeFactor := params.GetConfig().SqrtExpDropTime
+	return dropTimeFactor * dropTimeFactor
+}
+
+// QuadraticPenalty returns the penalty that will be applied to an offline validator
+// based on the number of slots that they are offline.
+func QuadraticPenalty(numberOfSlots uint64) uint64 {
+	slotFactor := (numberOfSlots * numberOfSlots) / 2
+	penaltyQuotient := quadraticPenaltyQuotient()
+	return slotFactor / penaltyQuotient
+}
+
+// RewardValidatorCrosslink applies rewards to validators part of a shard committee for voting on a shard.
+// TODO(#538): Change this to big.Int as tests using 64 bit integers fail due to integer overflow.
+func RewardValidatorCrosslink(totalDeposit uint64, participatedDeposits uint64, rewardQuotient uint64, validator *pb.ValidatorRecord) {
+	currentBalance := int64(validator.Balance)
+	currentBalance += int64(currentBalance) / int64(rewardQuotient) * (2*int64(participatedDeposits) - int64(totalDeposit)) / int64(totalDeposit)
+	validator.Balance = uint64(currentBalance)
+}
+
+// PenaliseValidatorCrosslink applies penalties to validators part of a shard committee for not voting on a shard.
+func PenaliseValidatorCrosslink(timeSinceLastConfirmation uint64, rewardQuotient uint64, validator *pb.ValidatorRecord) {
+	newBalance := validator.Balance
+	quadraticQuotient := quadraticPenaltyQuotient()
+	newBalance -= newBalance/rewardQuotient + newBalance*timeSinceLastConfirmation/quadraticQuotient
+	validator.Balance = newBalance
 }

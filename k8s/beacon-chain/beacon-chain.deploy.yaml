@@ -17,7 +17,7 @@ spec:
       priorityClassName: production-priority
       containers:
         - name: beacon-chain
-          image: gcr.io/ovcharovvladimir/Prysm/beacon-chain:latest
+          image: gcr.io/prysmaticlabs/prysm/beacon-chain:latest
           args: 
             - "--web3provider=ws://$(GETH_NODES_SERVICE_HOST):$(GETH_NODES_SERVICE_PORT_WS)"
             - "--verbosity=debug"

@@ -7,51 +7,82 @@ import (
 	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/p2p/v1"
 )
 
-// BeaconCommittee structure encompassing a specific shard and voter indices
-// within that shard's committee.
-type BeaconCommittee struct {
-	ShardID   int
-	Committee []uint32
-}
+// ShuffleValidatorsToCommittees shuffles validator indices and splits them by slot and shard.
+func ShuffleValidatorsToCommittees(seed common.Hash, validators []*pb.ValidatorRecord, crosslinkStartShard uint64) ([]*pb.ShardAndCommitteeArray, error) {
+	indices := ActiveValidatorIndices(validators)
 
-// ValidatorsByHeightShard splits a shuffled voter list by height and by shard,
-// it ensures there's enough validators per height and per shard, if not, it'll skip
-// some heights and shards.
-func ValidatorsByHeightShard(seed common.Hash, activeValidators []*pb.ValidatorRecord, dynasty uint64, crosslinkStartShard uint64) ([]*BeaconCommittee, error) {
-	indices := ActiveValidatorIndices(activeValidators, dynasty)
-	var committeesPerSlot int
-	var slotsPerCommittee int
-	var committees []*BeaconCommittee
-
-	if len(indices) >= params.CycleLength*params.MinCommiteeSize {
-		committeesPerSlot = len(indices)/params.CycleLength/(params.MinCommiteeSize*2) + 1
-		slotsPerCommittee = 1
-	} else {
-		committeesPerSlot = 1
-		slotsPerCommittee = 1
-		for len(indices)*slotsPerCommittee < params.MinCommiteeSize && slotsPerCommittee < params.CycleLength {
-			slotsPerCommittee *= 2
-		}
-	}
-
-	// split the shuffled list for heights.
-	shuffledList, err := utils.ShuffleIndices(seed, indices)
+	// split the shuffled list for slot.
+	shuffledValidators, err := utils.ShuffleIndices(seed, indices)
 	if err != nil {
 		return nil, err
 	}
 
-	heightList := utils.SplitIndices(shuffledList, params.CycleLength)
+	return splitBySlotShard(shuffledValidators, crosslinkStartShard), nil
+}
 
-	// split the shuffled height list for shards
-	for i, subList := range heightList {
-		shardList := utils.SplitIndices(subList, params.MinCommiteeSize)
-		for _, shardIndex := range shardList {
-			shardID := int(crosslinkStartShard) + i*committeesPerSlot/slotsPerCommittee
-			committees = append(committees, &BeaconCommittee{
-				ShardID:   shardID,
-				Committee: shardIndex,
+// InitialShardAndCommitteesForSlots initialises the committees for shards by shuffling the validators
+// and assigning them to specific shards.
+func InitialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.ShardAndCommitteeArray, error) {
+	seed := make([]byte, 0, 32)
+	committees, err := ShuffleValidatorsToCommittees(common.BytesToHash(seed), validators, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	// Initialize with 3 cycles of the same committees.
+	initialCommittees := make([]*pb.ShardAndCommitteeArray, 0, 3*params.GetConfig().CycleLength)
+	initialCommittees = append(initialCommittees, committees...)
+	initialCommittees = append(initialCommittees, committees...)
+	initialCommittees = append(initialCommittees, committees...)
+	return initialCommittees, nil
+}
+
+// splitBySlotShard splits the validator list into evenly sized committees and assigns each
+// committee to a slot and a shard. If the validator set is large, multiple committees are assigned
+// to a single slot and shard. See getCommitteesPerSlot for more details.
+func splitBySlotShard(shuffledValidators []uint32, crosslinkStartShard uint64) []*pb.ShardAndCommitteeArray {
+	committeesPerSlot := getCommitteesPerSlot(uint64(len(shuffledValidators)))
+
+	committeBySlotAndShard := []*pb.ShardAndCommitteeArray{}
+
+	// split the validator indices by slot.
+	validatorsBySlot := utils.SplitIndices(shuffledValidators, params.GetConfig().CycleLength)
+	for i, validatorsForSlot := range validatorsBySlot {
+		shardCommittees := []*pb.ShardAndCommittee{}
+		validatorsByShard := utils.SplitIndices(validatorsForSlot, committeesPerSlot)
+		shardStart := crosslinkStartShard + uint64(i)*committeesPerSlot
+
+		for j, validatorsForShard := range validatorsByShard {
+			shardID := (shardStart + uint64(j)) % params.GetConfig().ShardCount
+			shardCommittees = append(shardCommittees, &pb.ShardAndCommittee{
+				Shard:     shardID,
+				Committee: validatorsForShard,
 			})
 		}
+
+		committeBySlotAndShard = append(committeBySlotAndShard, &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: shardCommittees,
+		})
 	}
-	return committees, nil
+
+	return committeBySlotAndShard
+}
+
+// getCommitteesPerSlot calculates the parameters for ShuffleValidatorsToCommittees.
+// The minimum value for committeesPerSlot is 1.
+// Otherwise, the value for committeesPerSlot is the smaller of
+// numActiveValidators / CycleLength /  (MinCommitteeSize*2) + 1 or
+// ShardCount / CycleLength.
+func getCommitteesPerSlot(numActiveValidators uint64) uint64 {
+	cycleLength := params.GetConfig().CycleLength
+	boundOnValidators := numActiveValidators/cycleLength/(params.GetConfig().MinCommiteeSize*2) + 1
+	boundOnShardCount := params.GetConfig().ShardCount / cycleLength
+
+	// Ensure that comitteesPerSlot is at least 1.
+	if boundOnShardCount == 0 {
+		return 1
+	} else if boundOnValidators > boundOnShardCount {
+		return boundOnShardCount
+	}
+	return boundOnValidators
 }

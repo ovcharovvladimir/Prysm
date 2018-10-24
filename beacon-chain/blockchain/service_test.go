@@ -2,18 +2,22 @@ package blockchain
 
 import (
 	"context"
+	"errors"
 	"io/ioutil"
+	"math/big"
 	"testing"
+
+	"github.com/ovcharovvladimir/Prysm/beacon-chain/casper"
 
 	"github.com/ovcharovvladimir/essentiaHybrid"
 	"github.com/ovcharovvladimir/essentiaHybrid/common"
 	gethTypes "github.com/ovcharovvladimir/essentiaHybrid/core/types"
-	"github.com/ovcharovvladimir/essentiaHybrid/event"
-	"github.com/ovcharovvladimir/Prysm/beacon-chain/params"
+	"github.com/ovcharovvladimir/Prysm/beacon-chain/db"
 	"github.com/ovcharovvladimir/Prysm/beacon-chain/powchain"
+	btestutil "github.com/ovcharovvladimir/Prysm/beacon-chain/testutil"
 	"github.com/ovcharovvladimir/Prysm/beacon-chain/types"
 	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/p2p/v1"
-	"github.com/ovcharovvladimir/Prysm/shared/database"
+	"github.com/ovcharovvladimir/Prysm/shared/event"
 	"github.com/ovcharovvladimir/Prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -31,7 +35,8 @@ func (f *mockClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.
 }
 
 func (f *mockClient) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
-	return nil, nil
+	head := &gethTypes.Header{Number: big.NewInt(0), Difficulty: big.NewInt(100)}
+	return gethTypes.NewBlockWithHeader(head), nil
 }
 
 func (f *mockClient) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
@@ -42,26 +47,48 @@ func (f *mockClient) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{'A'})
 }
 
-func TestStartStop(t *testing.T) {
-	ctx := context.Background()
+type faultyClient struct{}
 
-	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewDB(config)
-	if err != nil {
-		t.Fatalf("could not setup beaconDB: %v", err)
-	}
+func (f *faultyClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
+	return new(event.Feed).Subscribe(ch), nil
+}
 
+func (f *faultyClient) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
+	return nil, errors.New("failed")
+}
+
+func (f *faultyClient) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
+	return new(event.Feed).Subscribe(ch), nil
+}
+
+func (f *faultyClient) LatestBlockHash() common.Hash {
+	return common.BytesToHash([]byte{'A'})
+}
+
+func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB) *ChainService {
 	endpoint := "ws://127.0.0.1"
-	client := &mockClient{}
-	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
+	ctx := context.Background()
+	var web3Service *powchain.Web3Service
+	var err error
+	if faultyPoWClient {
+		client := &faultyClient{}
+		web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
+	} else {
+		client := &mockClient{}
+		web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
+	}
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	beaconChain, err := NewBeaconChain(db.DB())
+	if err := beaconDB.InitializeState(nil); err != nil {
+		t.Fatalf("Failed to initialize state: %v", err)
+	}
+
 	cfg := &Config{
 		BeaconBlockBuf: 0,
-		BeaconDB:       db.DB(),
-		Chain:          beaconChain,
+		BeaconDB:       beaconDB,
+		Web3Service:    web3Service,
+		EnablePOWChain: true,
 	}
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
@@ -70,76 +97,19 @@ func TestStartStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
+
+	return chainService
+}
+
+func TestStartStop(t *testing.T) {
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, false, db)
+
+	chainService.IncomingBlockFeed()
+
+	// Test the start function.
 	chainService.Start()
-
-	cfg = &Config{
-		BeaconBlockBuf: 0,
-		BeaconDB:       db.DB(),
-		Chain:          beaconChain,
-		Web3Service:    web3Service,
-	}
-	chainService, err = NewChainService(ctx, cfg)
-	if err != nil {
-		t.Fatalf("unable to setup chain service: %v", err)
-	}
-	chainService.Start()
-
-	if len(chainService.CurrentActiveState().RecentBlockHashes()) != 0 {
-		t.Errorf("incorrect recent block hashes")
-	}
-	if len(chainService.CurrentCrystallizedState().Validators()) != params.BootstrappedValidatorsCount {
-		t.Errorf("incorrect default voter size")
-	}
-	if chainService.ContainsBlock([32]byte{}) {
-		t.Errorf("chain is not empty")
-	}
-	hasState, err := chainService.HasStoredState()
-	if err != nil {
-		t.Fatalf("calling HasStoredState failed")
-	}
-	if hasState {
-		t.Errorf("has stored state should return false")
-	}
-	chainService.CanonicalBlockFeed()
-	chainService.CanonicalCrystallizedStateFeed()
-
-	chainService, _ = NewChainService(ctx, cfg)
-
-	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: [][]byte{{'A'}}})
-	activeStateHash, err := active.Hash()
-	if err != nil {
-		t.Fatalf("Cannot hash active state: %v", err)
-	}
-	chainService.chain.SetActiveState(active)
-
-	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{LastStateRecalc: 10000})
-	crystallizedStateHash, err := crystallized.Hash()
-	if err != nil {
-		t.Fatalf("Cannot hash crystallized state: %v", err)
-	}
-	chainService.chain.SetCrystallizedState(crystallized)
-
-	parentBlock := NewBlock(t, nil)
-	parentHash, _ := parentBlock.Hash()
-
-	block := NewBlock(t, &pb.BeaconBlock{
-		SlotNumber:            2,
-		ActiveStateHash:       activeStateHash[:],
-		CrystallizedStateHash: crystallizedStateHash[:],
-		ParentHash:            parentHash[:],
-		PowChainRef:           []byte("a"),
-	})
-	if err := chainService.SaveBlock(block); err != nil {
-		t.Errorf("save block should have failed")
-	}
-
-	// Save states so HasStoredState state should return true.
-	chainService.chain.SetActiveState(types.NewActiveState(&pb.ActiveState{}))
-	chainService.chain.SetCrystallizedState(types.NewCrystallizedState(&pb.CrystallizedState{}))
-	hasState, _ = chainService.HasStoredState()
-	if !hasState {
-		t.Errorf("has stored state should return false")
-	}
 
 	if err := chainService.Stop(); err != nil {
 		t.Fatalf("unable to stop chain service: %v", err)
@@ -151,124 +121,25 @@ func TestStartStop(t *testing.T) {
 	}
 }
 
-func TestFaultyStop(t *testing.T) {
-	ctx := context.Background()
-	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewDB(config)
-	if err != nil {
-		t.Fatalf("could not setup beaconDB: %v", err)
-
-	}
-	endpoint := "ws://127.0.0.1"
-	client := &mockClient{}
-	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
-	if err != nil {
-		t.Fatalf("unable to set up web3 service: %v", err)
-	}
-	beaconChain, err := NewBeaconChain(db.DB())
-	if err != nil {
-		t.Fatalf("could not register blockchain service: %v", err)
-	}
-	cfg := &Config{
-		BeaconBlockBuf: 0,
-		BeaconDB:       db.DB(),
-		Chain:          beaconChain,
-		Web3Service:    web3Service,
-	}
-
-	chainService, err := NewChainService(ctx, cfg)
-	if err != nil {
-		t.Fatalf("unable to setup chain service: %v", err)
-	}
-
-	chainService.Start()
-
-	chainService.chain.SetActiveState(types.NewActiveState(nil))
-	err = chainService.Stop()
-	if err == nil {
-		t.Errorf("chain stop should have failed with persist active state")
-	}
-
-	chainService.chain.SetActiveState(types.NewActiveState(&pb.ActiveState{}))
-	chainService.chain.SetCrystallizedState(types.NewCrystallizedState(nil))
-	err = chainService.Stop()
-	if err == nil {
-		t.Errorf("chain stop should have failed with persist crystallized state")
-	}
-}
-
-func TestProcessingBadBlock(t *testing.T) {
+func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	hook := logTest.NewGlobal()
-	ctx := context.Background()
-	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewDB(config)
-	if err != nil {
-		t.Fatalf("could not setup beaconDB: %v", err)
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, true, db)
 
-	}
-	endpoint := "ws://127.0.0.1"
-	client := &mockClient{}
-	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
-	if err != nil {
-		t.Fatalf("unable to set up web3 service: %v", err)
-	}
-	beaconChain, err := NewBeaconChain(db.DB())
-	if err != nil {
-		t.Fatalf("could not register blockchain service: %v", err)
-	}
-
-	var validators []*pb.ValidatorRecord
-	for i := 0; i < 40; i++ {
-		voter := &pb.ValidatorRecord{Balance: 32, StartDynasty: 1, EndDynasty: 10}
-		validators = append(validators, voter)
-	}
-
-	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{Validators: validators, CurrentDynasty: 5})
-	crystallizedStateHash, err := crystallized.Hash()
-	if err != nil {
-		t.Fatalf("Cannot hash crystallized state: %v", err)
-	}
-
-	testAttesterBitfield := []byte{200, 148, 146, 179, 49}
-	active := types.NewActiveState(&pb.ActiveState{PendingAttestations: []*pb.AttestationRecord{{AttesterBitfield: testAttesterBitfield}}})
-	if err := beaconChain.SetActiveState(active); err != nil {
-		t.Fatalf("unable to Mutate Active state: %v", err)
-	}
-
-	cfg := &Config{
-		BeaconBlockBuf: 0,
-		BeaconDB:       db.DB(),
-		Chain:          beaconChain,
-		Web3Service:    web3Service,
-	}
-	chainService, _ := NewChainService(ctx, cfg)
-	chainService.chain.SetCrystallizedState(crystallized)
-
-	parentBlock := NewBlock(t, nil)
-	if err := chainService.SaveBlock(parentBlock); err != nil {
-		t.Fatal(err)
-	}
-	parentHash, _ := parentBlock.Hash()
-
-	activeStateHash, err := active.Hash()
-	if err != nil {
-		t.Fatalf("Cannot hash active state: %v", err)
-	}
-
-	block := NewBlock(t, &pb.BeaconBlock{
-		SlotNumber:            1,
-		ActiveStateHash:       activeStateHash[:],
-		CrystallizedStateHash: crystallizedStateHash[:],
-		ParentHash:            parentHash[:],
-		PowChainRef:           []byte("a"),
+	block := types.NewBlock(&pb.BeaconBlock{
+		Slot:        1,
+		PowChainRef: []byte("a"),
 	})
 
+	blockChan := make(chan *types.Block)
 	exitRoutine := make(chan bool)
 	go func() {
-		chainService.blockProcessing(chainService.ctx.Done())
+		chainService.blockProcessing(blockChan)
 		<-exitRoutine
 	}()
-	if err := chainService.SaveBlock(block); err != nil {
+
+	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
 
@@ -276,179 +147,318 @@ func TestProcessingBadBlock(t *testing.T) {
 	chainService.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "Finished processing received block and states into DAG")
+	testutil.AssertLogsContain(t, hook, "Proof-of-Work chain reference in block does not exist")
 }
 
-func TestUpdateHead(t *testing.T) {
+func TestRunningChainService(t *testing.T) {
 	hook := logTest.NewGlobal()
-	ctx := context.Background()
-	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewDB(config)
-	if err != nil {
-		t.Fatalf("could not setup beaconDB: %v", err)
 
-	}
-	endpoint := "ws://127.0.0.1"
-	client := &mockClient{}
-	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
-	if err != nil {
-		t.Fatalf("unable to set up web3 service: %v", err)
-	}
-	beaconChain, err := NewBeaconChain(db.DB())
-	if err != nil {
-		t.Fatalf("could not register blockchain service: %v", err)
-	}
-	cfg := &Config{
-		BeaconBlockBuf:   0,
-		IncomingBlockBuf: 0,
-		BeaconDB:         db.DB(),
-		Chain:            beaconChain,
-		Web3Service:      web3Service,
-	}
-	chainService, _ := NewChainService(ctx, cfg)
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, false, db)
 
-	active, crystallized, err := types.NewGenesisStates()
+	active := types.NewGenesisActiveState()
+	crystallized, err := types.NewGenesisCrystallizedState(nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	activeStateHash, _ := active.Hash()
-	crystallizedStateHash, _ := crystallized.Hash()
 
-	parentHash := []byte{}
-	chainService.processedBlockHashesBySlot[4] = append(
-		chainService.processedBlockHashesBySlot[4],
-		parentHash,
-	)
+	activeStateRoot, _ := active.Hash()
+	crystallizedStateRoot, _ := crystallized.Hash()
 
-	block := NewBlock(t, &pb.BeaconBlock{
-		SlotNumber:            64,
-		ActiveStateHash:       activeStateHash[:],
-		CrystallizedStateHash: crystallizedStateHash[:],
-		ParentHash:            parentHash,
+	genesis := types.NewGenesisBlock([32]byte{}, [32]byte{})
+	chainService.beaconDB.SaveBlock(genesis)
+	parentHash, err := genesis.Hash()
+	if err != nil {
+		t.Fatalf("unable to get hash of canonical head: %v", err)
+	}
+
+	currentSlot := uint64(1)
+	attestationSlot := uint64(0)
+	shard := crystallized.ShardAndCommitteesForSlots()[attestationSlot].ArrayShardAndCommittee[0].Shard
+
+	block := types.NewBlock(&pb.BeaconBlock{
+		Slot:                  currentSlot,
+		ActiveStateRoot:       activeStateRoot[:],
+		CrystallizedStateRoot: crystallizedStateRoot[:],
+		AncestorHashes:        [][]byte{parentHash[:]},
 		PowChainRef:           []byte("a"),
+		Attestations: []*pb.AggregatedAttestation{{
+			Slot:               attestationSlot,
+			AttesterBitfield:   []byte{128, 0},
+			Shard:              shard,
+			JustifiedBlockHash: parentHash[:],
+		}},
 	})
 
-	h, err := block.Hash()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	chainService.processedBlockHashesBySlot[64] = append(
-		chainService.processedBlockHashesBySlot[64],
-		h[:],
-	)
-	chainService.processedBlocksBySlot[64] = append(
-		chainService.processedBlocksBySlot[64],
-		block,
-	)
-	chainService.processedActiveStatesBySlot[64] = append(
-		chainService.processedActiveStatesBySlot[64],
-		active,
-	)
-	chainService.processedCrystallizedStatesBySlot[64] = append(
-		chainService.processedCrystallizedStatesBySlot[64],
-		crystallized,
-	)
-
-	chainService.lastSlot = 64
-	chainService.updateHead(65)
-	testutil.AssertLogsContain(t, hook, "Canonical block determined")
-
-	chainService.lastSlot = 100
-	chainService.updateHead(101)
-}
-
-func TestProcessingBlockWithAttestations(t *testing.T) {
-	ctx := context.Background()
-	config := &database.DBConfig{DataDir: "", Name: "", InMemory: true}
-	db, err := database.NewDB(config)
-	if err != nil {
-		t.Fatalf("could not setup beaconDB: %v", err)
-
-	}
-	endpoint := "ws://127.0.0.1"
-	client := &mockClient{}
-	web3Service, err := powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{Endpoint: endpoint, Pubkey: "", VrcAddr: common.Address{}}, client, client, client)
-	if err != nil {
-		t.Fatalf("unable to set up web3 service: %v", err)
-	}
-	beaconChain, err := NewBeaconChain(db.DB())
-	if err != nil {
-		t.Fatalf("could not register blockchain service: %v", err)
-	}
-
-	var validators []*pb.ValidatorRecord
-	for i := 0; i < 40; i++ {
-		voter := &pb.ValidatorRecord{Balance: 32, StartDynasty: 1, EndDynasty: 10}
-		validators = append(validators, voter)
-	}
-
-	crystallized := types.NewCrystallizedState(&pb.CrystallizedState{
-		LastStateRecalc: 64,
-		Validators:      validators,
-		CurrentDynasty:  5,
-		IndicesForSlots: []*pb.ShardAndCommitteeArray{
-			{
-				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-					{ShardId: 0, Committee: []uint32{0, 1, 2, 3, 4, 5}},
-				},
-			},
-		},
+	blockNoParent := types.NewBlock(&pb.BeaconBlock{
+		Slot:           currentSlot,
+		PowChainRef:    []byte("a"),
+		AncestorHashes: [][]byte{{}},
 	})
-	crystallizedStateHash, err := crystallized.Hash()
-	if err != nil {
-		t.Fatalf("Cannot hash crystallized state: %v", err)
-	}
-	if err := beaconChain.SetCrystallizedState(crystallized); err != nil {
-		t.Fatalf("unable to mutate crystallized state: %v", err)
-	}
 
-	var recentBlockHashes [][]byte
-	for i := 0; i < params.CycleLength+1; i++ {
-		recentBlockHashes = append(recentBlockHashes, []byte{'X'})
-	}
-	active := types.NewActiveState(&pb.ActiveState{RecentBlockHashes: recentBlockHashes})
-	if err := beaconChain.SetActiveState(active); err != nil {
-		t.Fatalf("unable to mutate active state: %v", err)
-	}
-	cfg := &Config{
-		BeaconBlockBuf: 0,
-		BeaconDB:       db.DB(),
-		Chain:          beaconChain,
-		Web3Service:    web3Service,
-	}
-
-	chainService, _ := NewChainService(ctx, cfg)
-
+	blockChan := make(chan *types.Block)
 	exitRoutine := make(chan bool)
 	go func() {
-		chainService.blockProcessing(chainService.ctx.Done())
+		chainService.blockProcessing(blockChan)
 		<-exitRoutine
 	}()
 
-	parentBlock := NewBlock(t, nil)
-	if err := chainService.SaveBlock(parentBlock); err != nil {
+	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	parentHash, _ := parentBlock.Hash()
 
-	activeStateHash, err := active.Hash()
-	if err != nil {
-		t.Fatalf("Cannot hash active state: %v", err)
-	}
-
-	block := NewBlock(t, &pb.BeaconBlock{
-		SlotNumber:            1,
-		ActiveStateHash:       activeStateHash[:],
-		CrystallizedStateHash: crystallizedStateHash[:],
-		ParentHash:            parentHash[:],
-		PowChainRef:           []byte("a"),
-		Attestations: []*pb.AttestationRecord{
-			{Slot: 0, ShardId: 0, AttesterBitfield: []byte{'0'}},
-		},
-	})
-
+	chainService.incomingBlockChan <- blockNoParent
 	chainService.incomingBlockChan <- block
+	<-blockChan
 	chainService.cancel()
 	exitRoutine <- true
+	testutil.AssertLogsContain(t, hook, "Chain service context closed, exiting goroutine")
+	testutil.AssertLogsContain(t, hook, "Block points to nil parent")
+	testutil.AssertLogsContain(t, hook, "Processed block")
+}
+
+func TestDoesPOWBlockExist(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, true, db)
+
+	block := types.NewBlock(&pb.BeaconBlock{
+		Slot: 10,
+	})
+
+	// Using a faulty client should throw error.
+	exists := chainService.doesPoWBlockExist(block)
+	if exists {
+		t.Error("Block corresponding to nil powchain reference should not exist")
+	}
+	testutil.AssertLogsContain(t, hook, "fetching PoW block corresponding to mainchain reference failed")
+}
+
+func getShardForSlot(t *testing.T, cState *types.CrystallizedState, slot uint64) uint64 {
+	shardAndCommittee, err := casper.GetShardAndCommitteesForSlot(
+		cState.ShardAndCommitteesForSlots(),
+		cState.LastStateRecalculationSlot(),
+		slot)
+	if err != nil {
+		t.Fatalf("Unable to get shard for slot: %d", slot)
+	}
+	return shardAndCommittee.ArrayShardAndCommittee[0].Shard
+}
+
+func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
+	db := btestutil.SetupDB(t)
+	defer btestutil.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, false, db)
+
+	active := types.NewGenesisActiveState()
+	crystallized, err := types.NewGenesisCrystallizedState(nil)
+	if err != nil {
+		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+
+	activeStateRoot, _ := active.Hash()
+	crystallizedStateRoot, _ := crystallized.Hash()
+
+	block0 := types.NewBlock(&pb.BeaconBlock{
+		Slot: 0,
+	})
+	if saveErr := chainService.beaconDB.SaveBlock(block0); saveErr != nil {
+		t.Fatalf("Cannot save block: %v", saveErr)
+	}
+	block0Hash, err := block0.Hash()
+	if err != nil {
+		t.Fatalf("Failed to compute block's hash: %v", err)
+	}
+
+	currentSlot := uint64(1)
+	attestationSlot := currentSlot - 1
+
+	block1 := types.NewBlock(&pb.BeaconBlock{
+		AncestorHashes:        [][]byte{block0Hash[:]},
+		Slot:                  currentSlot,
+		ActiveStateRoot:       activeStateRoot[:],
+		CrystallizedStateRoot: crystallizedStateRoot[:],
+		Attestations: []*pb.AggregatedAttestation{{
+			Slot:             attestationSlot,
+			AttesterBitfield: []byte{16, 0},
+			Shard:            getShardForSlot(t, crystallized, attestationSlot),
+		}},
+	})
+
+	blockChan := make(chan *types.Block)
+	exitRoutine := make(chan bool)
+	go func() {
+		chainService.blockProcessing(blockChan)
+		<-exitRoutine
+	}()
+
+	chainService.incomingBlockChan <- block1
+	block1Returned := <-blockChan
+
+	if block1 != block1Returned {
+		t.Fatalf("expected %v and %v to be the same", block1, block1Returned)
+	}
+
+	block1Hash, err := block1.Hash()
+	if err != nil {
+		t.Fatalf("unable to get hash of block 1: %v", err)
+	}
+
+	currentSlot++
+
+	// Add 1 more attestation field for slot2
+	block2 := types.NewBlock(&pb.BeaconBlock{
+		AncestorHashes: [][]byte{block1Hash[:]},
+		Slot:           currentSlot,
+		Attestations: []*pb.AggregatedAttestation{
+			{
+				Slot:             currentSlot - 2,
+				AttesterBitfield: []byte{8, 0},
+				Shard:            getShardForSlot(t, crystallized, currentSlot-2),
+			},
+			{
+				Slot:             currentSlot - 1,
+				AttesterBitfield: []byte{8, 0},
+				Shard:            getShardForSlot(t, crystallized, currentSlot-1),
+			},
+		}})
+	block2Hash, err := block2.Hash()
+	if err != nil {
+		t.Fatalf("unable to get hash of block 1: %v", err)
+	}
+
+	currentSlot++
+
+	// Add 1 more attestation field for slot3
+	block3 := types.NewBlock(&pb.BeaconBlock{
+		AncestorHashes: [][]byte{block2Hash[:]},
+		Slot:           currentSlot,
+		Attestations: []*pb.AggregatedAttestation{
+			{
+				Slot:             currentSlot - 3,
+				AttesterBitfield: []byte{4, 0},
+				Shard:            getShardForSlot(t, crystallized, currentSlot-3),
+			},
+			{
+				Slot:             currentSlot - 2,
+				AttesterBitfield: []byte{4, 0},
+				Shard:            getShardForSlot(t, crystallized, currentSlot-2),
+			},
+			{
+				Slot:             currentSlot - 1,
+				AttesterBitfield: []byte{4, 0},
+				Shard:            getShardForSlot(t, crystallized, currentSlot-1),
+			},
+		}})
+
+	chainService.incomingBlockChan <- block1
+	<-blockChan
+	chainService.incomingBlockChan <- block2
+	<-blockChan
+	chainService.incomingBlockChan <- block3
+	<-blockChan
+
+	chainService.cancel()
+	exitRoutine <- true
+}
+
+func TestUpdateHead(t *testing.T) {
+	genesisActive := types.NewGenesisActiveState()
+	genesisCrystallized, err := types.NewGenesisCrystallizedState(nil)
+	if err != nil {
+		t.Fatalf("Could not generate genesis state: %v", err)
+	}
+	genesisActiveRoot, _ := genesisActive.Hash()
+	genesisCrystallizedRoot, _ := genesisCrystallized.Hash()
+
+	genesis := types.NewGenesisBlock(genesisActiveRoot, genesisCrystallizedRoot)
+	genesisHash, err := genesis.Hash()
+	if err != nil {
+		t.Fatalf("Could not get genesis block hash: %v", err)
+	}
+	// Table driven tests for various fork choice scenarios.
+	tests := []struct {
+		blockSlot uint64
+		aState    *types.ActiveState
+		cState    *types.CrystallizedState
+		logAssert string
+	}{
+		// Higher slot but same crystallized state should trigger chain update.
+		{
+			blockSlot: 64,
+			aState:    genesisActive,
+			cState:    genesisCrystallized,
+			logAssert: "Chain head block and state updated",
+		},
+		// Higher slot, different crystallized state, but higher last finalized slot.
+		{
+			blockSlot: 64,
+			aState:    genesisActive,
+			cState:    types.NewCrystallizedState(&pb.CrystallizedState{LastFinalizedSlot: 10}),
+			logAssert: "Chain head block and state updated",
+		},
+		// Higher slot, different crystallized state, same last finalized slot,
+		// but last justified slot.
+		{
+			blockSlot: 64,
+			aState:    genesisActive,
+			cState: types.NewCrystallizedState(&pb.CrystallizedState{
+				LastFinalizedSlot: 0,
+				LastJustifiedSlot: 10,
+			}),
+			logAssert: "Chain head block and state updated",
+		},
+		// Same slot should not trigger a head update.
+		{
+			blockSlot: 0,
+			aState:    genesisActive,
+			cState:    genesisCrystallized,
+			logAssert: "Chain head not updated",
+		},
+	}
+	for _, tt := range tests {
+		hook := logTest.NewGlobal()
+		db := btestutil.SetupDB(t)
+		defer btestutil.TeardownDB(t, db)
+		chainService := setupBeaconChain(t, false, db)
+
+		aRoot, _ := tt.aState.Hash()
+		cRoot, _ := tt.cState.Hash()
+		block := types.NewBlock(&pb.BeaconBlock{
+			Slot:                  tt.blockSlot,
+			ActiveStateRoot:       aRoot[:],
+			CrystallizedStateRoot: cRoot[:],
+			AncestorHashes:        [][]byte{genesisHash[:]},
+			PowChainRef:           []byte("a"),
+		})
+		h, err := block.Hash()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		exitRoutine := make(chan bool)
+		blockChan := make(chan *types.Block)
+		go func() {
+			chainService.updateHead(blockChan)
+			<-exitRoutine
+		}()
+
+		if err := chainService.beaconDB.SaveBlock(block); err != nil {
+			t.Fatal(err)
+		}
+		chainService.unfinalizedBlocks[h] = &statePair{
+			activeState:       tt.aState,
+			crystallizedState: tt.cState,
+			cycleTransition:   true,
+		}
+
+		// If blocks pending processing is empty, the updateHead routine does nothing.
+		blockChan <- block
+		chainService.cancel()
+		exitRoutine <- true
+
+		testutil.AssertLogsContain(t, hook, tt.logAssert)
+	}
 }

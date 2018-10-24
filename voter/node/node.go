@@ -1,9 +1,10 @@
-// Package node defines a voter node which connects to a
+// Package node defines a validator client which connects to a
 // full beacon node as part of the Ethereum 2.0 specification.
 package node
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"os"
 	"os/signal"
@@ -29,60 +30,85 @@ var log = logrus.WithField("prefix", "node")
 
 const shardChainDBName = "shardchaindata"
 
-// ShardEthereum defines an instance of a sharding voter that manages
+// ValidatorClient defines an instance of a sharding validator that manages
 // the entire lifecycle of services attached to it participating in
 // Ethereum 2.0.
-type ShardEthereum struct {
+type ValidatorClient struct {
+	ctx      *cli.Context
 	services *shared.ServiceRegistry // Lifecycle and service store.
 	lock     sync.RWMutex
 	stop     chan struct{} // Channel to wait for termination notifications.
 	db       *database.DB
 }
 
-// NewShardInstance creates a new, Ethereum 2.0 sharding voter.
-func NewShardInstance(ctx *cli.Context) (*ShardEthereum, error) {
+// GeneratePubKey generates a random public key for the validator, if they have not provided one.
+func GeneratePubKey() ([]byte, error) {
+	pubkey := make([]byte, 48)
+	_, err := rand.Read(pubkey)
+
+	return pubkey, err
+}
+
+// NewValidatorClient creates a new, Ethereum 2.0 validator client.
+func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 	registry := shared.NewServiceRegistry()
-	shardEthereum := &ShardEthereum{
+	ValidatorClient := &ValidatorClient{
+		ctx:      ctx,
 		services: registry,
 		stop:     make(chan struct{}),
 	}
 
-	if err := shardEthereum.startDB(ctx); err != nil {
+	var pubKey []byte
+
+	inputKey := ctx.GlobalString(types.PubKeyFlag.Name)
+	if inputKey == "" {
+		var err error
+		pubKey, err = GeneratePubKey()
+		if err != nil {
+			return nil, err
+		}
+		log.Warnf("PublicKey not detected, generating a new one: %v", pubKey)
+
+	} else {
+		pubKey = []byte(inputKey)
+	}
+
+	if err := ValidatorClient.startDB(ctx); err != nil {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerP2P(); err != nil {
+	if err := ValidatorClient.registerP2P(ctx); err != nil {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerTXPool(); err != nil {
+	if err := ValidatorClient.registerTXPool(); err != nil {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerRPCClientService(ctx); err != nil {
+	if err := ValidatorClient.registerRPCClientService(ctx); err != nil {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerBeaconService(); err != nil {
+	if err := ValidatorClient.registerBeaconService(pubKey); err != nil {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerAttesterService(); err != nil {
+	if err := ValidatorClient.registerAttesterService(pubKey); err != nil {
 		return nil, err
 	}
 
-	if err := shardEthereum.registerProposerService(); err != nil {
+	if err := ValidatorClient.registerProposerService(); err != nil {
 		return nil, err
 	}
 
-	return shardEthereum, nil
+	return ValidatorClient, nil
 }
 
-// Start every service in the sharding voter.
-func (s *ShardEthereum) Start() {
+// Start every service in the validator client.
+func (s *ValidatorClient) Start() {
 	s.lock.Lock()
 
-	log.Info("Starting sharding voter")
+	log.Info("Starting sharding validator")
 
 	s.services.StartAll()
 
@@ -102,8 +128,8 @@ func (s *ShardEthereum) Start() {
 				log.Info("Already shutting down, interrupt more to panic.", "times", i-1)
 			}
 		}
-		debug.Exit() // Ensure trace and CPU profile data are flushed.
-		panic("Panic closing the sharding voter")
+		debug.Exit(s.ctx) // Ensure trace and CPU profile data are flushed.
+		panic("Panic closing the sharding validator")
 	}()
 
 	// Wait for stop channel to be closed.
@@ -111,19 +137,19 @@ func (s *ShardEthereum) Start() {
 }
 
 // Close handles graceful shutdown of the system.
-func (s *ShardEthereum) Close() {
+func (s *ValidatorClient) Close() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	s.db.Close()
 	s.services.StopAll()
-	log.Info("Stopping sharding voter")
+	log.Info("Stopping sharding validator")
 
 	close(s.stop)
 }
 
-// startDB attaches a LevelDB wrapped object to the shardEthereum instance.
-func (s *ShardEthereum) startDB(ctx *cli.Context) error {
+// startDB attaches a LevelDB wrapped object to the ValidatorClient instance.
+func (s *ValidatorClient) startDB(ctx *cli.Context) error {
 	path := ctx.GlobalString(cmd.DataDirFlag.Name)
 	config := &database.DBConfig{DataDir: path, Name: shardChainDBName, InMemory: false}
 	db, err := database.NewDB(config)
@@ -135,9 +161,9 @@ func (s *ShardEthereum) startDB(ctx *cli.Context) error {
 	return nil
 }
 
-// registerP2P attaches a p2p server to the ShardEthereum instance.
-func (s *ShardEthereum) registerP2P() error {
-	shardp2p, err := p2p.NewServer()
+// registerP2P attaches a p2p server to the ValidatorClient instance.
+func (s *ValidatorClient) registerP2P(ctx *cli.Context) error {
+	shardp2p, err := configureP2P(ctx)
 	if err != nil {
 		return fmt.Errorf("could not register shardp2p service: %v", err)
 	}
@@ -148,8 +174,8 @@ func (s *ShardEthereum) registerP2P() error {
 // can spin up a transaction pool that will relay incoming transactions via an
 // event feed. For our first releases, this can just relay test/fake transaction data
 // the proposer can serialize into collation blobs.
-// TODO: design this txpool system for our first release.
-func (s *ShardEthereum) registerTXPool() error {
+// TODO(#161): design this txpool system for our first release.
+func (s *ValidatorClient) registerTXPool() error {
 	var shardp2p *p2p.Server
 	if err := s.services.FetchService(&shardp2p); err != nil {
 		return err
@@ -163,39 +189,59 @@ func (s *ShardEthereum) registerTXPool() error {
 
 // registerBeaconService registers a service that fetches streams from a beacon node
 // via RPC.
-func (s *ShardEthereum) registerBeaconService() error {
+func (s *ValidatorClient) registerBeaconService(pubKey []byte) error {
 	var rpcService *rpcclient.Service
 	if err := s.services.FetchService(&rpcService); err != nil {
 		return err
 	}
-	b := beacon.NewBeaconVoter(context.TODO(), beacon.DefaultConfig(), rpcService)
+	b := beacon.NewBeaconValidator(context.TODO(), pubKey, rpcService)
 	return s.services.RegisterService(b)
 }
 
 // registerAttesterService that listens to assignments from the beacon service.
-func (s *ShardEthereum) registerAttesterService() error {
+func (s *ValidatorClient) registerAttesterService(pubKey []byte) error {
 	var beaconService *beacon.Service
 	if err := s.services.FetchService(&beaconService); err != nil {
 		return err
 	}
 
-	att := attester.NewAttester(context.TODO(), beaconService)
+	var rpcService *rpcclient.Service
+	if err := s.services.FetchService(&rpcService); err != nil {
+		return err
+	}
+
+	att := attester.NewAttester(context.TODO(), &attester.Config{
+		Assigner:      beaconService,
+		AssignmentBuf: 100,
+		Client:        rpcService,
+		PublicKey:     pubKey,
+	})
 	return s.services.RegisterService(att)
 }
 
 // registerProposerService that listens to assignments from the beacon service.
-func (s *ShardEthereum) registerProposerService() error {
+func (s *ValidatorClient) registerProposerService() error {
+	var rpcService *rpcclient.Service
+	if err := s.services.FetchService(&rpcService); err != nil {
+		return err
+	}
 	var beaconService *beacon.Service
 	if err := s.services.FetchService(&beaconService); err != nil {
 		return err
 	}
 
-	prop := proposer.NewProposer(context.TODO(), beaconService)
+	prop := proposer.NewProposer(context.TODO(), &proposer.Config{
+		Assigner:              beaconService,
+		Client:                rpcService,
+		AssignmentBuf:         100,
+		AttestationBufferSize: 100,
+		AttesterFeed:          beaconService,
+	})
 	return s.services.RegisterService(prop)
 }
 
 // registerRPCClientService registers a new RPC client that connects to a beacon node.
-func (s *ShardEthereum) registerRPCClientService(ctx *cli.Context) error {
+func (s *ValidatorClient) registerRPCClientService(ctx *cli.Context) error {
 	endpoint := ctx.GlobalString(types.BeaconRPCProviderFlag.Name)
 	rpcService := rpcclient.NewRPCClient(context.TODO(), &rpcclient.Config{
 		Endpoint: endpoint,

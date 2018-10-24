@@ -1,18 +1,18 @@
 ## Utility to Deploy Validator Registration Contract
 
-This is a utility to help users deploy voter registration contract for running their own beacon chain node in a local containerized set up. To run the utility, it assumes there is a running gess node as a separate process attached to proof-of-work main chain. The utility will deploy the voter registration contract and print out the contract address. Users will pass the contract address to the beacon chain node to monitor when they have been conducted to become an active voter.
+This is a utility to help users deploy validator registration contract for running their own beacon chain node in a local containerized set up. To run the utility, it assumes there is a running geth node as a separate process attached to proof-of-work main chain. The utility will deploy the validator registration contract and print out the contract address. Users will pass the contract address to the beacon chain node to monitor when they have been conducted to become an active validator.
 
 ### Usage
 
 *Name:*  
-   **deployVRC** - this is a util to deploy voter registration contract
+   **deployVRC** - this is a util to deploy validator registration contract
 
 *Usage:*  
    deployVRC [global options] command [command options] [arguments...]
 
 *Flags:*  
    **--keystoreUTCPath**    Keystore UTC file to unlock account (default: "./datadir/keystore/UTC...")   
-   **--ipcPath**        Filename for IPC socket/pipe within the datadir (default: "./gess.ipc")   
+   **--ipcPath**        Filename for IPC socket/pipe within the datadir (default: "./geth.ipc")   
    **--httpPath**      HTTP-RPC server listening interface (default: "http://localhost:8545/")   
    **--passwordFile**   Password file for unlock account (default: "./password.txt")   
    **--privKey**       Private key to unlock account   
@@ -30,8 +30,8 @@ bazel run //deployVRC -- --privKey yourPrivateKey
 To use UTC JSON with IPC:
 ```
 bazel run //deployVRC --\
-  --ipcPath /path/to/your/gess.ipc \
-  --UTCPath /path/to/your/keystore/UTCJSON \
+  --ipcPath /path/to/your/geth.ipc \
+  --keystoreUTCPath /path/to/your/keystore/UTCJSON \
   --passwordFile /path/to/your/password.txt
 ```
 
@@ -40,7 +40,7 @@ To use UTC JSON with RPC:
 ```
 bazel run //deployVRC --\
   --httpPath http://localhost:8545/  \
-  --UTCPath /path/to/your/keystore/UTCJSON \
+  --keystoreUTCPath /path/to/your/keystore/UTCJSON \
   --passwordFile /path/to/your/password.txt
 ```
 
@@ -48,7 +48,7 @@ or
 
 ```
 bazel run //deployVRC --\
-  --UTCPath /path/to/your/keystore/UTCJSON \
+  --keystoreUTCPath /path/to/your/keystore/UTCJSON \
   --passwordFile /path/to/your/password.txt
 ```
 

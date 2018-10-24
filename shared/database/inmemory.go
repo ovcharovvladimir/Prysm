@@ -56,15 +56,13 @@ func (s *KVStore) Delete(k []byte) error {
 	return nil
 }
 
-// Close satisfies essdb.Database.
+// Close satisfies ethdb.Database.
 func (s *KVStore) Close() {
-	//TODO: Implement Close for KVStore
 	log.Debug("ShardKV Close() isnt implemented yet")
 }
 
-// NewBatch satisfies essdb.Database.
+// NewBatch satisfies ethdb.Database.
 func (s *KVStore) NewBatch() essdb.Batch {
-	//TODO: Implement NewBatch for KVStore
 	log.Debug("ShardKV NewBatch() isnt implemented yet")
 	return nil
 }

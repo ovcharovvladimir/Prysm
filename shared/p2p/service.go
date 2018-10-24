@@ -1,27 +1,18 @@
-// Package p2p handles peer-to-peer networking for the sharding package.
-//
-// Notes:
-// Gossip sub topics can be identified by their proto message types.
-//
-// 		topic := proto.MessageName(myMsg)
-//
-// Then we can assume that only these message types are broadcast in that
-// gossip subscription.
 package p2p
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sync"
 
-	"github.com/ovcharovvladimir/essentiaHybrid/event"
 	"github.com/golang/protobuf/proto"
+	"github.com/ovcharovvladimir/Prysm/shared/event"
 	"github.com/sirupsen/logrus"
 
 	floodsub "github.com/libp2p/go-floodsub"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
-	shardpb "github.com/ovcharovvladimir/Prysm/proto/sharding/p2p/v1"
 )
 
 // Sender represents a struct that is able to relay information via p2p.
@@ -32,12 +23,13 @@ type Sender interface {
 
 // Server is a placeholder for a p2p service. To be designed.
 type Server struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	mutex  *sync.Mutex
-	feeds  map[reflect.Type]*event.Feed
-	host   host.Host
-	gsub   *floodsub.PubSub
+	ctx          context.Context
+	cancel       context.CancelFunc
+	mutex        *sync.Mutex
+	feeds        map[reflect.Type]Feed
+	host         host.Host
+	gsub         *floodsub.PubSub
+	topicMapping map[reflect.Type]string
 }
 
 // NewServer creates a new p2p server instance.
@@ -57,29 +49,22 @@ func NewServer() (*Server, error) {
 	}
 
 	return &Server{
-		ctx:    ctx,
-		cancel: cancel,
-		feeds:  make(map[reflect.Type]*event.Feed),
-		host:   host,
-		gsub:   gsub,
-		mutex:  &sync.Mutex{},
+		ctx:          ctx,
+		cancel:       cancel,
+		feeds:        make(map[reflect.Type]Feed),
+		host:         host,
+		gsub:         gsub,
+		mutex:        &sync.Mutex{},
+		topicMapping: make(map[reflect.Type]string),
 	}, nil
 }
 
 // Start the main routine for an p2p server.
 func (s *Server) Start() {
 	log.Info("Starting service")
-	if err := startDiscovery(s.ctx, s.host, s.gsub); err != nil {
+	if err := startDiscovery(s.ctx, s.host); err != nil {
 		log.Errorf("Could not start p2p discovery! %v", err)
 		return
-	}
-
-	// Subscribe to all topics.
-	for topic, msgType := range topicTypeMapping {
-		log.WithFields(logrus.Fields{
-			"topic": topic,
-		}).Debug("Subscribing to topic")
-		go s.subscribeToTopic(topic, msgType)
 	}
 }
 
@@ -91,37 +76,112 @@ func (s *Server) Stop() error {
 	return nil
 }
 
+// RegisterTopic with a message and the adapter stack for the given topic. The
+// message type provided will be feed selector for emitting messages received
+// on a given topic.
+//
+// The topics can originate from multiple sources. In other words, messages on
+// TopicA may come from direct peer communication or a pub/sub channel.
+func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...Adapter) {
+	log.WithFields(logrus.Fields{
+		"topic": topic,
+	}).Debug("Subscribing to topic")
+
+	msgType := messageType(message)
+	s.topicMapping[msgType] = topic
+
+	sub, err := s.gsub.Subscribe(topic)
+	if err != nil {
+		log.Errorf("Failed to subscribe to topic: %v", err)
+		return
+	}
+	feed := s.Feed(message)
+
+	// Reverse adapter order
+	for i := len(adapters)/2 - 1; i >= 0; i-- {
+		opp := len(adapters) - 1 - i
+		adapters[i], adapters[opp] = adapters[opp], adapters[i]
+	}
+
+	go func() {
+		defer sub.Cancel()
+		for {
+			msg, err := sub.Next(s.ctx)
+
+			if s.ctx.Err() != nil {
+				log.WithError(s.ctx.Err()).Debug("Context error")
+				return
+			}
+
+			if err != nil {
+				log.Errorf("Failed to get next message: %v", err)
+				return
+			}
+
+			var h Handler = func(pMsg Message) {
+				s.emit(pMsg, feed, msg, msgType)
+			}
+
+			pMsg := Message{Ctx: s.ctx}
+
+			for _, adapter := range adapters {
+				h = adapter(h)
+			}
+
+			h(pMsg)
+		}
+	}()
+}
+
+func (s *Server) emit(pMsg Message, feed Feed, msg *floodsub.Message, msgType reflect.Type) {
+	d, ok := reflect.New(msgType).Interface().(proto.Message)
+	if !ok {
+		log.Errorf("Received message is not a protobuf message: %s", msgType)
+		return
+	}
+
+	if err := proto.Unmarshal(msg.Data, d); err != nil {
+		log.Errorf("Failed to decode data: %v", err)
+		return
+	}
+
+	pMsg.Data = d
+
+	i := feed.Send(pMsg)
+	log.WithFields(logrus.Fields{
+		"numSubs": i,
+		"msgType": fmt.Sprintf("%T", d),
+		"msgName": proto.MessageName(d),
+	}).Debug("Emit p2p message to feed subscribers")
+}
+
 // Subscribe returns a subscription to a feed of msg's Type and adds the channels to the feed.
-func (s *Server) Subscribe(msg interface{}, channel interface{}) event.Subscription {
+func (s *Server) Subscribe(msg proto.Message, channel chan Message) event.Subscription {
 	return s.Feed(msg).Subscribe(channel)
 }
 
 // Send a message to a specific peer.
-func (s *Server) Send(msg interface{}, peer Peer) {
-	// TODO
+func (s *Server) Send(msg proto.Message, peer Peer) {
+	// TODO(#175)
 	// https://github.com/ovcharovvladimir/Prysm/issues/175
 
-	// TODO: Support passing value and pointer type messages.
-
-	// TODO: Remove debug log after send is implemented.
+	// TODO(#175): Remove debug log after send is implemented.
 	_ = peer
 	log.Debug("Broadcasting to everyone rather than sending a single peer")
 	s.Broadcast(msg)
 }
 
 // Broadcast a message to the world.
-func (s *Server) Broadcast(msg interface{}) {
-	// TODO: https://github.com/ovcharovvladimir/Prysm/issues/176
-	topic := topic(msg)
+func (s *Server) Broadcast(msg proto.Message) {
+	topic := s.topicMapping[messageType(msg)]
 	log.WithFields(logrus.Fields{
 		"topic": topic,
-	}).Debugf("Broadcasting msg %T", msg)
+	}).Debugf("Broadcasting msg %+v", msg)
 
-	if topic == shardpb.Topic_UNKNOWN {
+	if topic == "" {
 		log.Warnf("Topic is unknown for message type %T. %v", msg, msg)
 	}
 
-	// TODO: Next assertion may fail if your msg is not a pointer to a msg.
 	m, ok := msg.(proto.Message)
 	if !ok {
 		log.Errorf("Message to broadcast (type: %T) is not a protobuf message: %v", msg, msg)
@@ -133,47 +193,7 @@ func (s *Server) Broadcast(msg interface{}) {
 		log.Errorf("Failed to marshal data for broadcast: %v", err)
 		return
 	}
-	if err := s.gsub.Publish(topic.String(), b); err != nil {
+	if err := s.gsub.Publish(topic, b); err != nil {
 		log.Errorf("Failed to publish to gossipsub topic: %v", err)
-	}
-}
-
-func (s *Server) subscribeToTopic(topic shardpb.Topic, msgType reflect.Type) {
-	sub, err := s.gsub.Subscribe(topic.String())
-	if err != nil {
-		log.Errorf("Failed to subscribe to topic: %v", err)
-		return
-	}
-	defer sub.Cancel()
-	feed := s.Feed(msgType)
-
-	for {
-		msg, err := sub.Next(s.ctx)
-
-		if s.ctx.Err() != nil {
-			return // Context closed or something.
-		}
-		if err != nil {
-			log.Errorf("Failed to get next message: %v", err)
-			return
-		}
-
-		// TODO: reflect.Value.Interface() can panic so we should capture that
-		// panic so the server doesn't crash.
-		d, ok := reflect.New(msgType).Interface().(proto.Message)
-		if !ok {
-			log.Error("Received message is not a protobuf message")
-			continue
-		}
-		err = proto.Unmarshal(msg.Data, d)
-		if err != nil {
-			log.Errorf("Failed to decode data: %v", err)
-			continue
-		}
-
-		i := feed.Send(Message{Data: d})
-		log.WithFields(logrus.Fields{
-			"numSubs": i,
-		}).Debug("Sent a request to subs")
 	}
 }

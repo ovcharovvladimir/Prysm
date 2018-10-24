@@ -2,7 +2,7 @@
 package txpool
 
 import (
-	"github.com/ovcharovvladimir/essentiaHybrid/event"
+	"github.com/ovcharovvladimir/Prysm/shared/event"
 	"github.com/ovcharovvladimir/Prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )

@@ -1,11 +1,11 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: gess-nodes
+  name: geth-nodes
 spec:
   selector:
     component: node
-    universe: gess
+    universe: geth
   ports:
     - port: 8545
       targetPort: 8545

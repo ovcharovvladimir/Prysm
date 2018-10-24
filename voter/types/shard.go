@@ -1,4 +1,4 @@
-// Package types defines the types used throughout the voter.
+// Package types defines the types used throughout the validator.
 package types
 
 import (
@@ -8,7 +8,7 @@ import (
 	"math/big"
 
 	"github.com/ovcharovvladimir/essentiaHybrid/common"
-	gessTypes "github.com/ovcharovvladimir/essentiaHybrid/core/types"
+	gethTypes "github.com/ovcharovvladimir/essentiaHybrid/core/types"
 	"github.com/ovcharovvladimir/essentiaHybrid/essdb"
 	"github.com/ovcharovvladimir/essentiaHybrid/rlp"
 	logger "github.com/sirupsen/logrus"
@@ -199,7 +199,7 @@ func (s *Shard) SaveBody(body []byte) error {
 		return errors.New("body is empty")
 	}
 	chunks := Chunks(body)                   // wrapper allowing us to merklizing the chunks.
-	chunkRoot := gessTypes.DeriveSha(chunks) // merklize the serialized blobs.
+	chunkRoot := gethTypes.DeriveSha(chunks) // merklize the serialized blobs.
 	if err := s.SetAvailability(&chunkRoot, true); err != nil {
 		return err
 	}

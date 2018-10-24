@@ -13,16 +13,16 @@ GO ?= latest
 
 voter:
 	@echo "Voter"
-	build/env.sh go run build/ci.go install ./voter
+	bash build/env.sh go run build/ci.go install ./voter
 	@echo "Done building VOTER."
 	@echo "Run \"$(GOBIN)/voter \" to launch voter."
 beacon:
-	build/env.sh go run build/ci.go install ./beacon-chain
+	bash build/env.sh go run build/ci.go install ./beacon-chain
 	@echo "Done building BEACON-CHAIN."
 	@echo "Run \"$(GOBIN)/beacon-chain\" to launch beacon-chain"
 
 all:
-	build/env.sh go run build/ci.go install
+	bash build/env.sh go run build/ci.go install
 	@echo "Run \"$(GOBIN)"
 
 

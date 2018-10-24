@@ -11,6 +11,16 @@ import (
 func DefaultConfig() *Config {
 	return &Config{
 		CollationSizeLimit: DefaultCollationSizeLimit(),
+		SlotDuration:       8.0,
+		CycleLength:        64,
+	}
+}
+
+// DemoConfig for running the system under shorter defaults.
+func DemoConfig() *Config {
+	return &Config{
+		SlotDuration: 2.0,
+		CycleLength:  5,
 	}
 }
 
@@ -22,5 +32,7 @@ func DefaultCollationSizeLimit() int64 {
 
 // Config contains configs for node to participate in the sharded universe.
 type Config struct {
-	CollationSizeLimit int64 // CollationSizeLimit is the maximum size the serialized blobs in a collation can take.
+	CollationSizeLimit int64  // CollationSizeLimit is the maximum size the serialized blobs in a collation can take.
+	SlotDuration       uint64 // SlotDuration in seconds.
+	CycleLength        uint64
 }

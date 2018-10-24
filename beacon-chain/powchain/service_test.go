@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ovcharovvladimir/essentiaHybrid"
+	ethereum "github.com/ovcharovvladimir/essentiaHybrid"
 	"github.com/ovcharovvladimir/essentiaHybrid/common"
 	gethTypes "github.com/ovcharovvladimir/essentiaHybrid/core/types"
-	"github.com/ovcharovvladimir/essentiaHybrid/event"
+	"github.com/ovcharovvladimir/Prysm/shared/event"
 	"github.com/ovcharovvladimir/Prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -53,7 +53,7 @@ func TestNewWeb3Service(t *testing.T) {
 	if _, err := NewWeb3Service(ctx, &Web3ServiceConfig{endpoint, "", common.Address{}}, nil, &goodReader{}, &goodLogger{}); err != nil {
 		t.Errorf("passing in as ws endpoint should not throw error, received %v", err)
 	}
-	endpoint = "ipc://gess.ipc"
+	endpoint = "ipc://geth.ipc"
 	if _, err := NewWeb3Service(ctx, &Web3ServiceConfig{endpoint, "", common.Address{}}, nil, &goodReader{}, &goodLogger{}); err != nil {
 		t.Errorf("passing in an ipc endpoint should not throw error, received %v", err)
 	}
@@ -180,7 +180,7 @@ func TestGoodLogger(t *testing.T) {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
 
-	web3Service.pubKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	web3Service.pubKey = "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 	pubkey := common.HexToHash(web3Service.pubKey)
 
 	web3Service.reader = &goodReader{}
@@ -216,46 +216,56 @@ func TestGoodLogger(t *testing.T) {
 }
 
 func TestHeaderAfterValidation(t *testing.T) {
-	hook := logTest.NewGlobal()
-	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{endpoint, "", common.Address{}}, nil, &goodReader{}, &goodLogger{})
-	if err != nil {
-		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+	// User pubkeys with or without 0x should be OK.
+	testPubKeys := []string{
+		"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+		"0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 	}
 
-	web3Service.pubKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-	pubkey := common.HexToHash(web3Service.pubKey)
+	for _, tt := range testPubKeys {
+		func(pubKey string) {
+			hook := logTest.NewGlobal()
+			endpoint := "ws://127.0.0.1"
+			web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{endpoint, "", common.Address{}}, nil, &goodReader{}, &goodLogger{})
+			if err != nil {
+				t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+			}
 
-	web3Service.reader = &goodReader{}
-	web3Service.logger = &goodLogger{}
+			web3Service.pubKey = pubKey
+			p := common.HexToHash(web3Service.pubKey)
 
-	exitRoutine := make(chan bool)
+			web3Service.reader = &goodReader{}
+			web3Service.logger = &goodLogger{}
 
-	go func() {
-		web3Service.run(web3Service.ctx.Done())
-		<-exitRoutine
-	}()
+			exitRoutine := make(chan bool)
 
-	log := gethTypes.Log{Topics: []common.Hash{[32]byte{}, pubkey}}
-	web3Service.logChan <- log
+			go func() {
+				web3Service.run(web3Service.ctx.Done())
+				<-exitRoutine
+			}()
 
-	header := &gethTypes.Header{Number: big.NewInt(42)}
-	web3Service.headerChan <- header
+			log := gethTypes.Log{Topics: []common.Hash{[32]byte{}, p}}
+			web3Service.logChan <- log
 
-	web3Service.cancel()
-	exitRoutine <- true
+			header := &gethTypes.Header{Number: big.NewInt(42)}
+			web3Service.headerChan <- header
 
-	testutil.AssertLogsContain(t, hook, "Validator registered in VRC with public key")
+			web3Service.cancel()
+			exitRoutine <- true
 
-	if !web3Service.validatorRegistered {
-		t.Errorf("validatorRegistered status expected true, got %v", web3Service.validatorRegistered)
-	}
+			testutil.AssertLogsContain(t, hook, "Validator registered in VRC with public key")
 
-	if web3Service.blockNumber.Cmp(header.Number) != 0 {
-		t.Errorf("block number not set, expected %v, got %v", header.Number, web3Service.blockNumber)
-	}
+			if !web3Service.validatorRegistered {
+				t.Errorf("validatorRegistered status expected true, got %v", web3Service.validatorRegistered)
+			}
 
-	if web3Service.blockHash.Hex() != header.Hash().Hex() {
-		t.Errorf("block hash not set, expected %v, got %v", header.Hash().Hex(), web3Service.blockHash.Hex())
+			if web3Service.blockNumber.Cmp(header.Number) != 0 {
+				t.Errorf("block number not set, expected %v, got %v", header.Number, web3Service.blockNumber)
+			}
+
+			if web3Service.blockHash.Hex() != header.Hash().Hex() {
+				t.Errorf("block hash not set, expected %v, got %v", header.Hash().Hex(), web3Service.blockHash.Hex())
+			}
+		}(tt)
 	}
 }

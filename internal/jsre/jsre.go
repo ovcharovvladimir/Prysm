@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/ovcharovvladimir/essentiaHybrid/common"
-	"github.com/ovcharovvladimir/essentiaHybrid/internal/jsre/deps"
+	//"github.com/ovcharovvladimir/essentiaHybrid/internal/jsre/deps"
 	"github.com/robertkrimen/otto"
 )
 

@@ -5,12 +5,12 @@ package legacyutil
 import (
 	"math/big"
 
-	pb "github.com/ovcharovvladimir/Prysm/proto/sharding/p2p/v1"
 	"github.com/ovcharovvladimir/essentiaHybrid/common"
 	gethTypes "github.com/ovcharovvladimir/essentiaHybrid/core/types"
+	pb "github.com/ovcharovvladimir/Prysm/proto/sharding/p2p/v1"
 )
 
-// TransformTransaction of proto transaction to gess's transction.
+// TransformTransaction of proto transaction to geth's transction.
 func TransformTransaction(t *pb.Transaction) *gethTypes.Transaction {
 	return gethTypes.NewTransaction(
 		t.Nonce,
