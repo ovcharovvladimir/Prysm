@@ -37,7 +37,7 @@ if [ ! -L "$dir/essentiaHybrid" ]; then
     cd "$root"
 fi
 pth="$workspace/src/github.com"
-#Azure/azure-storage-blob-go/2018-03-28/azblob
+#github.com/Azure/azure-storage-blob-go/azblob
 if [ ! -L "$pth/Azure" ]; then
     mkdir -p "$pth"
     cd "$pth"
@@ -449,7 +449,7 @@ if [ ! -L "$pth" ]; then
   ln -s $solution/go.opencensus.io/. go.opencensus.io
   cd "$root"
 fi
-
+#github.com/Azure/azure-storage-blob-go/azblob
 
 echo "Path $dir"
 # Set up the environment to use the workspace.
