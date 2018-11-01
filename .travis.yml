@@ -7,28 +7,10 @@ matrix:
     go: 1.10.x
     env:
     - lint
-    before_install:
-    - go get -u golang.org/x/crypto/openpgp
-    - go get -u github.com/ovcharovvladimir/essentiaHybrid
-    - go get -u github.com/Azure/azure-storage-blob-go/2018-03-28/azblob
-    - go get -u github.com/alecthomas/gometalinter
-    - go get -u github.com/x-cray/logrus-prefixed-formatter
-    - go get -u github.com/multiformats/go-multiaddr
-    - go get -u github.com/urfave/cli
-    - go get -u google.golang.org/grpc
-    - go get -u golang.org/x/crypto/blake2b
-    - go get -u github.com/libp2p/go-libp2p/
-    - go get -u github.com/fjl/memsize/memsizeui
-    - go get -u github.com/libp2p/go-floodsub
-    - go get -u github.com/whyrusleeping/mdns
-    - go get -u github.com/syndtr/goleveldb/leveldb
-    - go get -u github.com/golang/protobuf/proto
-    - go get -u github.com/golang/mock/gomock
-    - go get -u  github.com/libp2p/go-testutil
     script:
-    - go run build/ci.go install ./beacon-chain
-    - go run build/ci.go install ./voter
-    - tar -cv ${TRAVIS_BUILD_DIR}/build/bin | gzip > Prysm.release.$(date +%F).tar.gz
+    - go get ./...
+    - go run build/ci.go install ./sness
+    - tar -cv ${TRAVIS_BUILD_DIR}/build/bin | gzip > ESS.Supernode.release.$(date +%F).tar.gz
   - language: node_js
     os: linux
     env:
@@ -44,6 +26,6 @@ deploy:
   provider: releases
   api_key:
     secure: PFV+O8/0sqK4qBLRpfMUPTEW85mqruDeCe8Z7/sp9/FLTmlRgnpoUJm+5Zg5GZAUB/dpZHzUWiGbB7d+lNJOwR+nIydUo8IZ6vQ3bWGA9xII7IhEI4guq7fS28pfhle6vvob0oBFCpGIrAdTCfC9n2VuMRjNlzCPg3Ec+OYSSEnDqZdnow/85R+T0WuIl0+jXfb5NZnPGL0Xt1ZnU+OfAZ9rKGJC5npbWdSsb+n71QeHqEVQfsrKzNVAhAPka0xQ3WqolSDRYzEBNG2F4nUC+EwMPv2YthXE9xU1KyXz/7gBQQY5tiK+4bBexKfoQlT5BKHd9KF2cBYkq0Auh+I4HqUaqmCZ5D1Hz2e2zQDU9EbZztPWBnv5LhVbf4nRFsmUUSZEGI//1MpB04S/zK9cUw9G2x1XuJlr3kfriXmuVbac9tAcIwWfhGftEGKVWIdyqIrmqm7mQlZvpXjvmhnDm1V4g+o7tdF4/xknXc/So31IcxOW27vITGgKiFMsqPlIaEGbHD9j7Zhj32UWCY5PRV6wTCZhDqpRt/Uqv586lgrj6F3/UhUJdxx4JN2OZrEGE9UhEdp2JpwDoWq/A80cUUWJI/Sul3w3OgcEcIzKRalCl8qCIK0Bc3ll9vPXJn2srATMXi7CZPT6s6MSYGr7KUURkXg+pvZxijojJKtwJg0=
-  file: "/build/bin/Prysm.release.$(date +%F).tar.gz"
+  file: "/build/bin/ESS.Supernode.release.$(date +%F).tar.gz"
   on:
     repo: ovcharovvladimir/Prysm
