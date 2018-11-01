@@ -6,12 +6,12 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ovcharovvladimir/essentiaHybrid/common"
-	gethTypes "github.com/ovcharovvladimir/essentiaHybrid/core/types"
-	"github.com/ovcharovvladimir/essentiaHybrid/ethdb"
-	"github.com/ovcharovvladimir/essentiaHybrid/rlp"
 	sharedDB "github.com/ovcharovvladimir/Prysm/shared/database"
 	"github.com/ovcharovvladimir/Prysm/shared/hashutil"
+	"github.com/ovcharovvladimir/essentiaHybrid/common"
+	gethTypes "github.com/ovcharovvladimir/essentiaHybrid/core/types"
+	"github.com/ovcharovvladimir/essentiaHybrid/essdb"
+	"github.com/ovcharovvladimir/essentiaHybrid/rlp"
 )
 
 type mockShardDB struct {
@@ -37,7 +37,7 @@ func (m *mockShardDB) Delete(k []byte) error {
 func (m *mockShardDB) Close() {
 }
 
-func (m *mockShardDB) NewBatch() ethdb.Batch {
+func (m *mockShardDB) NewBatch() essdb.Batch {
 	return nil
 }
 

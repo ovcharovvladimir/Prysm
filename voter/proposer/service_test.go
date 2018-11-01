@@ -13,7 +13,7 @@ import (
 	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/rpc/v1"
 	"github.com/ovcharovvladimir/Prysm/shared/event"
 	"github.com/ovcharovvladimir/Prysm/shared/testutil"
-	"github.com/ovcharovvladimir/Prysm/validator/internal"
+	"github.com/ovcharovvladimir/Prysm/voter/internal"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )

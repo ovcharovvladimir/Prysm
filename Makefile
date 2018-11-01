@@ -2,7 +2,7 @@
 # with Go source code. If you know what GOPATH is then you probably
 # don't need to bother with make.
 
-.PHONY: voter android ios gess-cross beacon  all  clean
+.PHONY: android ios sness  all  clean
 #.PHONY: gess-linux gess-linux-386 gess-linux-amd64 gess-linux-mips64 gess-linux-mips64le
 #.PHONY: gess-linux-arm gess-linux-arm-5 gess-linux-arm-6 gess-linux-arm-7 gess-linux-arm64
 #.PHONY: gess-darwin gess-darwin-386 gess-darwin-amd64
@@ -11,15 +11,10 @@
 GOBIN = $(shell pwd)/build/bin
 GO ?= latest
 
-voter:
-	@echo "Voter"
-	bash build/env.sh go run build/ci.go install ./voter
-	@echo "Done building VOTER."
-	@echo "Run \"$(GOBIN)/voter \" to launch voter."
-beacon:
-	bash build/env.sh go run build/ci.go install ./beacon-chain
-	@echo "Done building BEACON-CHAIN."
-	@echo "Run \"$(GOBIN)/beacon-chain\" to launch beacon-chain"
+sness:
+	bash build/env.sh go run build/ci.go install ./sness
+	@echo "Done building Ess Supernode."
+	@echo "Run \"$(GOBIN)/sness\" to launch sness"
 
 all:
 	bash build/env.sh go run build/ci.go install
