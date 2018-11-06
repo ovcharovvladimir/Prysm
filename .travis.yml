@@ -33,7 +33,6 @@ deploy:
     repo: ovcharovvladimir/Prysm
     provider: releases
     tags: false
-    options: 
-    -draft
+
     
     
