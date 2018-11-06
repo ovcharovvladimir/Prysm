@@ -109,6 +109,10 @@ func (w *Web3Service) Stop() error {
 
 // run subscribes to all the services for the powchain.
 func (w *Web3Service) run(done <-chan struct{}) {
+	log.Infof("Registered :", w.IsValidatorRegistered())
+	if w.IsValidatorRegistered() {
+		log.Infof("Registered") //: %v", err)
+	}
 	headSub, err := w.reader.SubscribeNewHead(w.ctx, w.headerChan)
 	if err != nil {
 		log.Errorf("Unable to subscribe to incoming PoW chain headers: %v", err)

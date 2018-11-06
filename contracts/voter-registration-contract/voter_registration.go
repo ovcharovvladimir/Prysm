@@ -7,12 +7,12 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/ovcharovvladimir/Prysm/shared/event"
 	ethereum "github.com/ovcharovvladimir/essentiaHybrid"
 	"github.com/ovcharovvladimir/essentiaHybrid/accounts/abi"
 	"github.com/ovcharovvladimir/essentiaHybrid/accounts/abi/bind"
 	"github.com/ovcharovvladimir/essentiaHybrid/common"
 	"github.com/ovcharovvladimir/essentiaHybrid/core/types"
-	"github.com/ovcharovvladimir/Prysm/shared/event"
 )
 
 // ValidatorRegistrationABI is the input ABI used to generate the binding from.
