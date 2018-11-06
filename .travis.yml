@@ -31,6 +31,9 @@ deploy:
    - ${TRAVIS_BUILD_DIR}/build/bin/ESS.Supernode.release.$(date +%F).tar.gz
   on:
     provider: releases
-    tags: true
+    tags: false
     repo: ovcharovvladimir/Prysm
+    options: 
+    - draft
+    
     
