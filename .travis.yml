@@ -10,7 +10,7 @@ matrix:
     script:
     - go get ./...
     - go run build/ci.go install ./sness
-    - tar -cv ${TRAVIS_BUILD_DIR}/build/bin | gzip > ${TRAVIS_BUILD_DIR}/build/bin/ESS.Supernode.release.$(date +%F).tar.gz
+    - tar -cv --directory=${TRAVIS_BUILD_DIR}/build/bin sness | gzip > ${TRAVIS_BUILD_DIR}/build/bin/ESS.Supernode.release.$(date +%F).tar.gz
   - language: node_js
     os: linux
     env:
