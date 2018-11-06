@@ -265,7 +265,7 @@ func (s *Service) assignRole(assignments []*pb.Assignment, startSlot uint64) err
 	}
 
 	if role == pb.ValidatorRole_UNKNOWN {
-		return fmt.Errorf("validator role was not assigned for key: %x", s.pubKey.)
+		return fmt.Errorf("validator role was not assigned for key: %x", s.pubKey)
 	}
 
 	s.role = role
