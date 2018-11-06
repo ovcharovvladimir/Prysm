@@ -30,10 +30,10 @@ deploy:
   file: 
    - ${TRAVIS_BUILD_DIR}/build/bin/ESS.Supernode.release.$(date +%F).tar.gz
   on:
+    repo: ovcharovvladimir/Prysm
     provider: releases
     tags: false
-    repo: ovcharovvladimir/Prysm
     options: 
-    - draft
+    -draft
     
     
