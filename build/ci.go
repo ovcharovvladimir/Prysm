@@ -950,7 +950,7 @@ func doXgo(cmdline []string) {
 	args := append(buildFlags(env), flag.Args()...)
 
 	if *alltools {
-		args = append(args, []string{"--dest", GOBIN}...)
+		//args = append(args, []string{"--dest", GOBIN}...)
 		for _, res := range allCrossCompiledArchiveFiles {
 			if strings.HasPrefix(res, GOBIN) {
 				// Binary tool found, cross build it explicitly
@@ -963,8 +963,8 @@ func doXgo(cmdline []string) {
 		return
 	}
 	// Otherwise xxecute the explicit cross compilation
-	path := args[len(args)-1]
-	args = append(args[:len(args)-1], []string{"--dest", GOBIN, path}...)
+	//path := args[len(args)-1]
+	//args = append(args[:len(args)-1], []string{"--dest", GOBIN, path}...)
 
 	xgo := xgoTool(args)
 	build.MustRun(xgo)
