@@ -23,3 +23,5 @@ voter/voter
 beacon-chain/beacon-chain
 
 *.debug
+
+sness/sness
