@@ -6,15 +6,14 @@ import (
 	"context"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/mattn/go-colorable"
 	pbp2p "github.com/ovcharovvladimir/Prysm/proto/beacon/p2p/v1"
 	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/rpc/v1"
 	"github.com/ovcharovvladimir/Prysm/shared/bitutil"
 	"github.com/ovcharovvladimir/Prysm/shared/event"
 	"github.com/ovcharovvladimir/Prysm/shared/hashutil"
-	"github.com/sirupsen/logrus"
+	"github.com/ovcharovvladimir/essentiaHybrid/log"
 )
-
-var log = logrus.WithField("prefix", "attester")
 
 type rpcClientService interface {
 	AttesterServiceClient() pb.AttesterServiceClient
@@ -48,6 +47,7 @@ type Config struct {
 
 // NewAttester creates a new attester instance.
 func NewAttester(ctx context.Context, cfg *Config) *Attester {
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
 	ctx, cancel := context.WithCancel(ctx)
 	return &Attester{
 		ctx:              ctx,
@@ -90,7 +90,7 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 
 			data, err := proto.Marshal(latestBeaconBlock)
 			if err != nil {
-				log.Errorf("could not marshal latest beacon block: %v", err)
+				log.Error("could not marshal latest beacon block", "err", err.Error())
 				continue
 			}
 			latestBlockHash := hashutil.Hash(data)
@@ -100,7 +100,7 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 			}
 			shardID, err := validator.ValidatorShardID(a.ctx, pubKeyReq)
 			if err != nil {
-				log.Errorf("could not get attester Shard ID: %v", err)
+				log.Error("could not get attester Shard ID:", err.Error())
 				continue
 			}
 
@@ -108,7 +108,7 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 
 			attesterIndex, err := validator.ValidatorIndex(a.ctx, pubKeyReq)
 			if err != nil {
-				log.Errorf("could not get attester index: %v", err)
+				log.Error("could not get attester index", "err", err.Error())
 				continue
 			}
 			attesterBitfield := bitutil.SetBitfield(int(attesterIndex.Index))
@@ -125,10 +125,10 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 
 			res, err := attester.AttestHead(a.ctx, attestReq)
 			if err != nil {
-				log.Errorf("could not attest head: %v", err)
+				log.Error("could not attest head", "err", err.Error())
 				continue
 			}
-			log.Infof("Attestation proposed successfully with hash %#x", res.AttestationHash)
+			log.Info("Attestation proposed successfully", "hash", res.AttestationHash)
 		}
 	}
 }

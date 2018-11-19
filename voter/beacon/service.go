@@ -9,14 +9,13 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/mattn/go-colorable"
 	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/rpc/v1"
 	"github.com/ovcharovvladimir/Prysm/shared/event"
 	"github.com/ovcharovvladimir/Prysm/shared/slotticker"
 	"github.com/ovcharovvladimir/Prysm/voter/params"
-	"github.com/sirupsen/logrus"
+	"github.com/ovcharovvladimir/essentiaHybrid/log"
 )
-
-var log = logrus.WithField("prefix", "beacon")
 
 type rpcClientService interface {
 	BeaconServiceClient() pb.BeaconServiceClient
@@ -40,6 +39,7 @@ type Service struct {
 // NewBeaconValidator instantiates a service that interacts with a beacon node
 // via gRPC requests.
 func NewBeaconValidator(ctx context.Context, pubKey []byte, rpcClient rpcClientService) *Service {
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                      ctx,
@@ -68,7 +68,7 @@ func (s *Service) Start() {
 	// NTP server, which will be important to do in production.
 	// currently in a cycle we are supposed to participate in.
 	if err := s.fetchCurrentAssignmentsAndGenesisTime(beaconServiceClient); err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 		return
 	}
 
@@ -140,7 +140,7 @@ func (s *Service) listenForAssignmentChange(client pb.BeaconServiceClient) {
 	req := &pb.ValidatorAssignmentRequest{PublicKeys: []*pb.PublicKey{{PublicKey: s.pubKey}}}
 	stream, err := client.ValidatorAssignments(s.ctx, req)
 	if err != nil {
-		log.Errorf("failed to fetch validator assignments stream: %v", err)
+		log.Error("failed to fetch validator assignments stream", "err", err)
 		return
 	}
 	for {
@@ -151,18 +151,18 @@ func (s *Service) listenForAssignmentChange(client pb.BeaconServiceClient) {
 		}
 		// If context is canceled we stop the loop.
 		if s.ctx.Err() != nil {
-			log.Debugf("Context has been canceled so shutting down the loop: %v", s.ctx.Err())
+			log.Debug("Context has been canceled so shutting down the loop", "err", s.ctx.Err())
 			break
 		}
 
 		if err != nil {
-			log.Errorf("Could not receive latest validator assignment from stream: %v", err)
+			log.Error("Could not receive latest validator assignment from stream", "err", err)
 			break
 		}
 
 		startSlot := s.startSlot()
 		if err := s.assignRole(assignment.Assignments, startSlot); err != nil {
-			log.Errorf("Could not assign a role for validator: %v", err)
+			log.Error("Could not assign a role for validator", "err", err)
 			break
 		}
 	}
@@ -177,9 +177,8 @@ func (s *Service) waitForAssignment(ticker <-chan uint64, client pb.BeaconServic
 			return
 
 		case slot := <-ticker:
-			log = log.WithField("slot", slot)
-			log.Infof("tick")
 
+			log.Info("tick", "slot", slot)
 			// Special case: skip responsibilities if assigned to the genesis block.
 			if s.assignedSlot != slot || s.assignedSlot == 0 {
 				continue
@@ -187,7 +186,7 @@ func (s *Service) waitForAssignment(ticker <-chan uint64, client pb.BeaconServic
 
 			block, err := client.CanonicalHead(s.ctx, &empty.Empty{})
 			if err != nil {
-				log.Errorf("Could not fetch canonical head via gRPC from beacon node: %v", err)
+				log.Error("Could not fetch canonical head via gRPC from beacon node", "err", err)
 				continue
 			}
 
@@ -209,7 +208,7 @@ func (s *Service) waitForAssignment(ticker <-chan uint64, client pb.BeaconServic
 func (s *Service) listenForProcessedAttestations(client pb.BeaconServiceClient) {
 	stream, err := client.LatestAttestation(s.ctx, &empty.Empty{})
 	if err != nil {
-		log.Errorf("Could not setup beacon chain attestation streaming client: %v", err)
+		log.Error("Could not setup beacon chain attestation streaming client", "err", err)
 		return
 	}
 	for {
@@ -221,15 +220,14 @@ func (s *Service) listenForProcessedAttestations(client pb.BeaconServiceClient) 
 		}
 		// If context is canceled we stop the loop.
 		if s.ctx.Err() != nil {
-			log.Debugf("Context has been canceled so shutting down the loop: %v", s.ctx.Err())
+			log.Debug("Context has been canceled so shutting down the loop", "err", s.ctx.Err())
 			break
 		}
 		if err != nil {
-			log.Errorf("Could not receive latest attestation from stream: %v", err)
+			log.Error("Could not receive latest attestation from stream", "err", err)
 			continue
 		}
-
-		log.WithField("slotNumber", attestation.GetSlot()).Info("Latest attestation slot number")
+		log.Info("Latest attestation slot number", "slotNumber", attestation.GetSlot())
 		s.processedAttestationFeed.Send(attestation)
 	}
 }
@@ -255,11 +253,11 @@ func (s *Service) assignRole(assignments []*pb.Assignment, startSlot uint64) err
 		assignedSlot = startSlot + assign.AssignedSlot
 		shardID = assign.ShardId
 
-		log.Infof("Validator shuffled. Pub key %#x assigned to shard ID %d for %v duty at slot %d",
-			s.pubKey,
-			shardID,
-			role,
-			assignedSlot)
+		log.Info("Validator shuffled"
+		"pubkey",s.pubKey,
+		"assigned to shardID",shardID,
+		"for",role,
+		"duty at slot",assignedSlot)
 
 		break
 	}
@@ -271,12 +269,8 @@ func (s *Service) assignRole(assignments []*pb.Assignment, startSlot uint64) err
 	s.role = role
 	s.assignedSlot = assignedSlot
 	s.shardID = shardID
+	log.Info("","rolw",role,"assignedSlot",assignedSlot,"shardID",shardID)
 
-	log = log.WithFields(logrus.Fields{
-		"role":         role,
-		"assignedSlot": assignedSlot,
-		"shardID":      shardID,
-	})
 	return nil
 }
 

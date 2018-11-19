@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/sirupsen/logrus"
+	"github.com/mattn/go-colorable"
+	"github.com/ovcharovvladimir/essentiaHybrid/log"
 )
-
-var log = logrus.WithField("prefix", "registry")
 
 // Service is a struct that can be registered into a ServiceRegistry for
 // easy dependency management.
@@ -29,6 +28,8 @@ type ServiceRegistry struct {
 
 // NewServiceRegistry starts a registry instance for convenience
 func NewServiceRegistry() *ServiceRegistry {
+	// Set up the logger
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
 	return &ServiceRegistry{
 		services: make(map[reflect.Type]Service),
 	}
@@ -48,7 +49,7 @@ func (s *ServiceRegistry) StopAll() {
 		kind := s.serviceTypes[i]
 		service := s.services[kind]
 		if err := service.Stop(); err != nil {
-			log.Panicf("Could not stop the following service: %v, %v", kind, err)
+			log.Crit("Could not stop the following service", kind, "err", err)
 		}
 	}
 }

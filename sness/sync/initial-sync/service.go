@@ -17,14 +17,13 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/mattn/go-colorable"
 	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/p2p/v1"
 	"github.com/ovcharovvladimir/Prysm/shared/event"
 	"github.com/ovcharovvladimir/Prysm/shared/p2p"
 	"github.com/ovcharovvladimir/Prysm/sness/types"
-	"github.com/sirupsen/logrus"
+	"github.com/ovcharovvladimir/essentiaHybrid/log"
 )
-
-var log = logrus.WithField("prefix", "initial-sync")
 
 // Config defines the configurable properties of InitialSync.
 //
@@ -86,6 +85,8 @@ type InitialSync struct {
 func NewInitialSyncService(ctx context.Context,
 	cfg Config,
 ) *InitialSync {
+	// Set up the logger
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
 	ctx, cancel := context.WithCancel(ctx)
 
 	blockBuf := make(chan p2p.Message, cfg.BlockBufferSize)
@@ -163,10 +164,10 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 					continue
 				}
 				if err := s.setBlockForInitialSync(data); err != nil {
-					log.Errorf("Could not set block for initial sync: %v", err)
+					log.Error("Could not set block for initial sync", err)
 				}
 				if err := s.requestCrystallizedStateFromPeer(data, msg.Peer); err != nil {
-					log.Errorf("Could not request crystallized state from peer: %v", err)
+					log.Error("Could not request crystallized state from peer", err)
 				}
 
 				continue
@@ -177,7 +178,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 			}
 
 			if err := s.validateAndSaveNextBlock(data); err != nil {
-				log.Errorf("Unable to save block: %v", err)
+				log.Error("Unable to save block", err)
 			}
 			s.requestNextBlock()
 		case msg := <-s.crystallizedStateBuf:
@@ -190,7 +191,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 			crystallizedState := types.NewCrystallizedState(data.CrystallizedState)
 			hash, err := crystallizedState.Hash()
 			if err != nil {
-				log.Errorf("Unable to hash crytsallized state: %v", err)
+				log.Error("Unable to hash crytsallized state", err)
 			}
 
 			if hash != s.initialCrystallizedStateRoot {
@@ -209,7 +210,7 @@ func (s *InitialSync) run(delaychan <-chan time.Time) {
 func (s *InitialSync) requestCrystallizedStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
 	block := types.NewBlock(data.Block)
 	h := block.CrystallizedStateRoot()
-	log.Debugf("Successfully processed incoming block with crystallized state hash: %#x", h)
+	log.Debug("Successfully processed incoming block with crystallized state hash:", h)
 	s.p2p.Send(&pb.CrystallizedStateRequest{Hash: h[:]}, peer)
 	return nil
 }
@@ -223,7 +224,7 @@ func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error
 	if err != nil {
 		return err
 	}
-	log.WithField("blockhash", fmt.Sprintf("%#x", h)).Debug("Crystallized state hash exists locally")
+	log.Debug("Crystallized state hash exists locally", "blockhash", fmt.Sprintf("%#x", h))
 
 	if err := s.writeBlockToDB(block); err != nil {
 		return err
@@ -231,7 +232,7 @@ func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error
 
 	s.initialCrystallizedStateRoot = block.CrystallizedStateRoot()
 
-	log.Infof("Saved block with hash %#x for initial sync", h)
+	log.Info("Saved block with hash %#x for initial sync", h)
 	return nil
 }
 

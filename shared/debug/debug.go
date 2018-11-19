@@ -34,8 +34,10 @@ import (
 	"time"
 
 	"github.com/fjl/memsize/memsizeui"
-	log "github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/mattn/go-colorable"
+	"github.com/ovcharovvladimir/essentiaHybrid/log"
+
+	"gopkg.in/urfave/cli.v1"
 )
 
 // Handler is the global debugging handler.
@@ -99,6 +101,7 @@ func (*HandlerT) MemStats() *runtime.MemStats {
 
 // GcStats returns GC statistics.
 func (*HandlerT) GcStats() *debug.GCStats {
+
 	s := new(debug.GCStats)
 	debug.ReadGCStats(s)
 	return s
@@ -107,6 +110,7 @@ func (*HandlerT) GcStats() *debug.GCStats {
 // CPUProfile turns on CPU profiling for nsec seconds and writes
 // profile data to file.
 func (h *HandlerT) CPUProfile(file string, nsec uint) error {
+
 	if err := h.StartCPUProfile(file); err != nil {
 		return err
 	}
@@ -127,7 +131,7 @@ func (h *HandlerT) StartCPUProfile(file string) error {
 	}
 	if err := pprof.StartCPUProfile(f); err != nil {
 		if err := f.Close(); err != nil {
-			log.Errorf("Failed to close file: %v", err)
+			log.Error("Failed to close file", "err", err)
 		}
 		return err
 	}
@@ -177,7 +181,7 @@ func (h *HandlerT) StartGoTrace(file string) error {
 	}
 	if err := trace.Start(f); err != nil {
 		if err := f.Close(); err != nil {
-			log.Errorf("Failed to close file: %v", err)
+			log.Error("Failed to close file", "err", err)
 		}
 		return err
 	}
@@ -208,6 +212,7 @@ func (h *HandlerT) StopGoTrace() error {
 // file. It uses a profile rate of 1 for most accurate information. If a different rate is
 // desired, set the rate and write the profile manually.
 func (*HandlerT) BlockProfile(file string, nsec uint) error {
+
 	runtime.SetBlockProfileRate(1)
 	time.Sleep(time.Duration(nsec) * time.Second)
 	defer runtime.SetBlockProfileRate(0)
@@ -256,7 +261,7 @@ func (*HandlerT) WriteMemProfile(file string) error {
 func (*HandlerT) Stacks() string {
 	buf := new(bytes.Buffer)
 	if err := pprof.Lookup("goroutine").WriteTo(buf, 2); err != nil {
-		log.Errorf("Failed to write pprof goroutine stacks: %v", err)
+		log.Error("Failed to write pprof goroutine stacks: %v", err)
 	}
 	return buf.String()
 }
@@ -331,6 +336,7 @@ func MigrateFlags(action func(ctx *cli.Context) error) func(*cli.Context) error 
 // Setup initializes profiling based on the CLI flags.
 // It should be called as early as possible in the program.
 func Setup(ctx *cli.Context) error {
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
 	// profiling, tracing
 	runtime.MemProfileRate = ctx.GlobalInt(MemProfileRateFlag.Name)
 	if traceFile := ctx.GlobalString(TraceFlag.Name); traceFile != "" {
@@ -367,12 +373,12 @@ func startPProf(address string) {
 func Exit(ctx *cli.Context) {
 	if traceFile := ctx.GlobalString(TraceFlag.Name); traceFile != "" {
 		if err := Handler.StopGoTrace(); err != nil {
-			log.Errorf("Failed to stop go tracing: %v", err)
+			log.Error("Failed to stop go tracing", err)
 		}
 	}
 	if cpuFile := ctx.GlobalString(CPUProfileFlag.Name); cpuFile != "" {
 		if err := Handler.StopCPUProfile(); err != nil {
-			log.Errorf("Failed to stop CPU profiling: %v", err)
+			log.Error("Failed to stop CPU profiling", err)
 		}
 	}
 }

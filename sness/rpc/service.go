@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/mattn/go-colorable"
 	pbp2p "github.com/ovcharovvladimir/Prysm/proto/beacon/p2p/v1"
 	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/rpc/v1"
 	"github.com/ovcharovvladimir/Prysm/shared/event"
@@ -17,12 +18,10 @@ import (
 	"github.com/ovcharovvladimir/Prysm/sness/params"
 	"github.com/ovcharovvladimir/Prysm/sness/types"
 	"github.com/ovcharovvladimir/essentiaHybrid/common"
-	"github.com/sirupsen/logrus"
+	"github.com/ovcharovvladimir/essentiaHybrid/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
-
-var log = logrus.WithField("prefix", "rpc")
 
 type beaconDB interface {
 	// These methods can be called on-demand by a validator
@@ -85,6 +84,7 @@ type Config struct {
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
 // interface.
 func NewRPCService(ctx context.Context, cfg *Config) *Service {
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                   ctx,
@@ -110,16 +110,16 @@ func (s *Service) Start() {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
 	if err != nil {
-		log.Errorf("Could not listen to port :%s: %v", s.port, err)
+		log.Error("Could not listen to port", "port", s.port, "err", err)
 		return
 	}
 	s.listener = lis
-	log.Infof("RPC server listening on port :%s", s.port)
+	log.Info("RPC server listening on port", "port", s.port)
 
 	if s.withCert != "" && s.withKey != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
 		if err != nil {
-			log.Errorf("could not load TLS keys: %s", err)
+			log.Error("could not load TLS keys", "err", err)
 		}
 		s.grpcServer = grpc.NewServer(grpc.Creds(creds))
 	} else {
@@ -134,7 +134,7 @@ func (s *Service) Start() {
 	go func() {
 		err = s.grpcServer.Serve(lis)
 		if err != nil {
-			log.Errorf("Could not serve gRPC: %v", err)
+			log.Error("Could not serve gRPC", "err", err)
 		}
 	}()
 }
@@ -246,7 +246,8 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 	if err != nil {
 		return nil, fmt.Errorf("could not hash block: %v", err)
 	}
-	log.WithField("blockHash", fmt.Sprintf("%#x", h)).Debugf("Block proposal received via RPC")
+	log.Info("Block proposal received via RPC", "blockHash", h)
+
 	// We relay the received block from the proposer to the chain service for processing.
 	s.chainService.IncomingBlockFeed().Send(block)
 	return &pb.ProposeResponse{BlockHash: h[:]}, nil

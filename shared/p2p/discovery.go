@@ -7,10 +7,9 @@ import (
 	host "github.com/libp2p/go-libp2p-host"
 	ps "github.com/libp2p/go-libp2p-peerstore"
 	mdns "github.com/libp2p/go-libp2p/p2p/discovery"
-	"github.com/sirupsen/logrus"
+	"github.com/mattn/go-colorable"
+	"github.com/ovcharovvladimir/essentiaHybrid/log"
 )
-
-var log = logrus.WithField("prefix", "p2p")
 
 // Discovery interval for multicast DNS querying.
 var discoveryInterval = 1 * time.Minute
@@ -23,6 +22,8 @@ var mDNSTag = mdns.ServiceTag
 //
 // TODO(287): add other discovery protocols such as DHT, etc.
 func startDiscovery(ctx context.Context, host host.Host) error {
+	// Set up the logger
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
 	mdnsService, err := mdns.NewMdnsService(ctx, host, discoveryInterval, mDNSTag)
 	if err != nil {
 		return err
@@ -40,17 +41,14 @@ type discovery struct {
 
 // HandlePeerFound registers the peer with the host.
 func (d *discovery) HandlePeerFound(pi ps.PeerInfo) {
-	log.WithFields(logrus.Fields{
-		"peer addrs": pi.Addrs,
-		"peer id":    pi.ID,
-	}).Debug("Attempting to connect to a peer")
+	log.Debug("Attempting to connect to a peer",
+		"peer addrs", pi.Addrs,
+		"peer id", pi.ID)
 
 	d.host.Peerstore().AddAddrs(pi.ID, pi.Addrs, ps.PermanentAddrTTL)
 	if err := d.host.Connect(d.ctx, pi); err != nil {
-		log.Warnf("Failed to connect to peer: %v", err)
+		log.Warn("Failed to connect to peer", err.Error())
 	}
 
-	log.WithFields(logrus.Fields{
-		"peers": d.host.Peerstore().Peers(),
-	}).Debug("Peers are now")
+	log.Debug("Peers are now", "peers", d.host.Peerstore().Peers())
 }

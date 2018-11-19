@@ -4,13 +4,12 @@ package attestation
 import (
 	"context"
 
+	"github.com/mattn/go-colorable"
 	"github.com/ovcharovvladimir/Prysm/shared/event"
 	"github.com/ovcharovvladimir/Prysm/sness/db"
 	"github.com/ovcharovvladimir/Prysm/sness/types"
-	"github.com/sirupsen/logrus"
+	"github.com/ovcharovvladimir/essentiaHybrid/log"
 )
-
-var log = logrus.WithField("prefix", "attestation")
 
 // Service represents a service that handles the internal
 // logic of managing aggregated attestation.
@@ -34,6 +33,7 @@ type Config struct {
 // NewAttestationService instantiates a new service instance that will
 // be registered into a running beacon node.
 func NewAttestationService(ctx context.Context, cfg *Config) *Service {
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:           ctx,
@@ -80,15 +80,15 @@ func (a *Service) aggregateAttestations() {
 		case attestation := <-a.incomingChan:
 			h, err := attestation.Hash()
 			if err != nil {
-				log.Errorf("Could not hash incoming attestation: %v", err)
+				log.Error("Could not hash incoming attestation", "err", err)
 				continue
 			}
 			if err := a.beaconDB.SaveAttestation(attestation); err != nil {
-				log.Errorf("Could not save attestation: %v", err)
+				log.Error("Could not save attestation", "err", err)
 				continue
 			}
 
-			log.Debugf("Forwarding aggregated attestation %#x to proposers through grpc", h)
+			log.Debug("Forwarding aggregated attestation to proposers through grpc", "attestation", h)
 		}
 	}
 }

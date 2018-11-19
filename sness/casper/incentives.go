@@ -1,13 +1,12 @@
 package casper
 
 import (
+	"github.com/mattn/go-colorable"
 	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/p2p/v1"
 	"github.com/ovcharovvladimir/Prysm/shared/mathutil"
 	"github.com/ovcharovvladimir/Prysm/sness/params"
-	"github.com/sirupsen/logrus"
+	"github.com/ovcharovvladimir/essentiaHybrid/log"
 )
-
-var log = logrus.WithField("prefix", "casper")
 
 // CalculateRewards adjusts validators balances by applying rewards or penalties
 // based on FFG incentive structure.
@@ -19,12 +18,14 @@ func CalculateRewards(
 	validators []*pb.ValidatorRecord,
 	totalParticipatedDeposit uint64,
 	timeSinceFinality uint64) []*pb.ValidatorRecord {
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
+
 	totalDeposit := TotalActiveValidatorDeposit(validators)
 	activeValidators := ActiveValidatorIndices(validators)
 	rewardQuotient := RewardQuotient(validators)
 	penaltyQuotient := quadraticPenaltyQuotient()
 
-	log.Debugf("Applying rewards and penalties for the validators for slot %d", slot)
+	log.Debug("Applying rewards and penalties for the validators for slot", "slot", slot)
 	if timeSinceFinality <= 3*params.GetConfig().CycleLength {
 		for _, validatorIndex := range activeValidators {
 			var voted bool

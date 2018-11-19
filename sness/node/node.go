@@ -10,6 +10,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/mattn/go-colorable"
 	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/p2p/v1"
 	"github.com/ovcharovvladimir/Prysm/shared"
 	"github.com/ovcharovvladimir/Prysm/shared/cmd"
@@ -27,12 +28,11 @@ import (
 	"github.com/ovcharovvladimir/Prysm/sness/utils"
 	"github.com/ovcharovvladimir/essentiaHybrid/common"
 	"github.com/ovcharovvladimir/essentiaHybrid/essclient"
+	"github.com/ovcharovvladimir/essentiaHybrid/log"
 	gethRPC "github.com/ovcharovvladimir/essentiaHybrid/rpc"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
-var log = logrus.WithField("prefix", "node")
 var beaconChainDBName = "poschaindata"
 
 // BeaconNode defines a struct that handles the services running a random beacon chain
@@ -49,6 +49,7 @@ type BeaconNode struct {
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
 func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
@@ -141,7 +142,7 @@ func (b *BeaconNode) Close() {
 	log.Info("Stopping Supernode")
 	b.services.StopAll()
 	if err := b.db.Close(); err != nil {
-		log.Errorf("Failed to close database: %v", err)
+		log.Error("Failed to close database: %v", err)
 	}
 	close(b.stop)
 }
@@ -166,7 +167,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	if cState == nil {
 		var genesisValidators []*pb.ValidatorRecord
 		if genesisJSON != "" {
-			log.Infof("Initializing Crystallized State from %s", genesisJSON)
+			log.Info("Initializing Crystallized State", "from", genesisJSON)
 			genesisValidators, err = utils.InitialValidatorsFromJSON(genesisJSON)
 			if err != nil {
 				return err
@@ -234,7 +235,7 @@ func (b *BeaconNode) registerPOWChainService(ctx *cli.Context) error {
 
 	rpcClient, err := gethRPC.Dial(b.ctx.GlobalString(utils.Web3ProviderFlag.Name))
 	if err != nil {
-		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
+		log.Crit("Access to PoW chain is required for validator. Unable to connect to Geth node:", err)
 	}
 	powClient := essclient.NewClient(rpcClient)
 	log.Warn("vrc: ", common.HexToAddress(b.ctx.GlobalString(utils.VrcContractFlag.Name)))

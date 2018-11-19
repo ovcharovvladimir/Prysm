@@ -9,11 +9,12 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/mattn/go-colorable"
 	pbp2p "github.com/ovcharovvladimir/Prysm/proto/beacon/p2p/v1"
 	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/rpc/v1"
 	"github.com/ovcharovvladimir/Prysm/shared/event"
 	"github.com/ovcharovvladimir/Prysm/shared/hashutil"
-	"github.com/sirupsen/logrus"
+	"github.com/ovcharovvladimir/essentiaHybrid/log"
 )
 
 var log = logrus.WithField("prefix", "proposer")
@@ -56,6 +57,7 @@ type Config struct {
 
 // NewProposer creates a new attester instance.
 func NewProposer(ctx context.Context, cfg *Config) *Proposer {
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
 	ctx, cancel := context.WithCancel(ctx)
 	return &Proposer{
 		ctx:                ctx,
@@ -158,7 +160,7 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 			// the proposal.
 			data, err := proto.Marshal(latestBeaconBlock)
 			if err != nil {
-				log.Errorf("Could not marshal latest beacon block: %v", err)
+				log.Error("Could not marshal latest beacon block", "err", err)
 				continue
 			}
 			latestBlockHash := hashutil.Hash(data)
@@ -178,11 +180,11 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 			}
 			res, err := client.ProposeBlock(p.ctx, req)
 			if err != nil {
-				log.Errorf("Could not propose block: %v", err)
+				log.Error("Could not propose block", "err", err)
 				continue
 			}
 
-			log.Infof("Block proposed successfully with hash %#x", res.BlockHash)
+			log.Info("Block proposed successfully with", "hash", res.BlockHash)
 			p.pendingAttestation = nil
 			p.lock.Unlock()
 		}

@@ -6,16 +6,15 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/mattn/go-colorable"
 	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/p2p/v1"
 	"github.com/ovcharovvladimir/Prysm/shared/event"
 	"github.com/ovcharovvladimir/Prysm/shared/p2p"
 	"github.com/ovcharovvladimir/Prysm/sness/casper"
 	"github.com/ovcharovvladimir/Prysm/sness/types"
-	"github.com/sirupsen/logrus"
+	"github.com/ovcharovvladimir/essentiaHybrid/log"
 	"go.opencensus.io/trace"
 )
-
-var log = logrus.WithField("prefix", "sync")
 
 type chainService interface {
 	IncomingBlockFeed() *event.Feed
@@ -91,6 +90,7 @@ func DefaultConfig() Config {
 
 // NewSyncService accepts a context and returns a new Service.
 func NewSyncService(ctx context.Context, cfg Config) *Service {
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                       ctx,
@@ -180,11 +180,11 @@ func (ss *Service) receiveBlockHash(msg p2p.Message) {
 	copy(h[:], data.Hash[:32])
 
 	if ss.db.HasBlock(h) {
-		log.Debugf("Received a hash for a block that has already been processed: %#x", h)
+		log.Debug("Received a hash for a block that has already been processed", "hash", h)
 		return
 	}
+	log.Debug("Received incoming block hash, requesting full block data from sender", "blockHash", h)
 
-	log.WithField("blockHash", fmt.Sprintf("%#x", h)).Debug("Received incoming block hash, requesting full block data from sender")
 	// Request the full block data from peer that sent the block hash.
 	_, sendBlockRequestSpan := trace.StartSpan(ctx, "sendBlockRequest")
 	ss.p2p.Send(&pb.BeaconBlockRequest{Hash: h[:]}, msg.Peer)
@@ -200,10 +200,10 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 	block := types.NewBlock(response.Block)
 	blockHash, err := block.Hash()
 	if err != nil {
-		log.Errorf("Could not hash received block: %v", err)
+		log.Error("Could not hash received block", "err", err)
 	}
 
-	log.Debugf("Processing response to block request: %#x", blockHash)
+	log.Debug("Processing response to block request", "hash", blockHash)
 
 	if ss.db.HasBlock(blockHash) {
 		log.Debug("Received a block that already exists. Exiting...")
@@ -212,7 +212,7 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 
 	cState, err := ss.db.GetCrystallizedState()
 	if err != nil {
-		log.Errorf("Failed to get crystallized state: %v", err)
+		log.Error("Failed to get crystallized state", "err", err)
 		return
 	}
 	if block.SlotNumber() < cState.LastFinalizedSlot() {
@@ -226,24 +226,25 @@ func (ss *Service) receiveBlock(msg p2p.Message) {
 
 		proposerShardID, _, err := casper.ProposerShardAndIndex(cState.ShardAndCommitteesForSlots(), cState.LastStateRecalculationSlot(), block.SlotNumber())
 		if err != nil {
-			log.Errorf("Failed to get proposer shard ID: %v", err)
+			log.Error("Failed to get proposer shard ID", "err", err)
 			return
 		}
 
 		// TODO(#258): stubbing public key with empty 32 bytes.
 		if err := attestation.VerifyProposerAttestation([32]byte{}, proposerShardID); err != nil {
-			log.Errorf("Failed to verify proposer attestation: %v", err)
+			log.Error("Failed to verify proposer attestation", "err", err)
 			return
 		}
 
 		_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
-		log.WithField("attestationHash", fmt.Sprintf("%#x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
+		log.Debug("Sending newly received attestation to subscribers", "attestationHash", attestation.Key())
 		ss.attestationService.IncomingAttestationFeed().Send(attestation)
 		sendAttestationSpan.End()
 	}
 
 	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
-	log.WithField("blockHash", fmt.Sprintf("%#x", blockHash)).Debug("Sending newly received block to subscribers")
+	log.Debug("Sending newly received block to subscribers", "blockHash", blockHash)
+
 	ss.chainService.IncomingBlockFeed().Send(block)
 	sendBlockSpan.End()
 }
@@ -264,12 +265,12 @@ func (ss *Service) handleBlockRequestBySlot(msg p2p.Message) {
 	block, err := ss.db.GetBlockBySlot(request.GetSlotNumber())
 	getBlockSpan.End()
 	if err != nil || block == nil {
-		log.Errorf("Error retrieving block from db: %v", err)
+		log.Error("Error retrieving block from db", "err", err)
 		return
 	}
 
 	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
-	log.WithField("slotNumber", fmt.Sprintf("%d", request.GetSlotNumber())).Debug("Sending requested block to peer")
+	log.Debug("Sending requested block to peer", "slotNumber", request.GetSlotNumber())
 	ss.p2p.Send(block.Proto(), msg.Peer)
 	sendBlockSpan.End()
 }
@@ -284,18 +285,18 @@ func (ss *Service) receiveAttestation(msg p2p.Message) {
 
 	attestation, err := ss.db.GetAttestation(h)
 	if err != nil {
-		log.Errorf("Can not check for attestation in DB: %v", err)
+		log.Error("Can not check for attestation in DB", "err", err)
 		return
 	}
 	if attestation != nil {
 		validatorExists := attestation.ContainsValidator(a.AttesterBitfield())
 		if validatorExists {
-			log.Debugf("Received attestation %#x already", h)
+			log.Debug("Already Received attestation", fmt.Sprintf("%#x", h))
 			return
 		}
 	}
 
-	log.WithField("attestationHash", fmt.Sprintf("%#x", h)).Debug("Forwarding attestation to subscribed services")
+	log.Debug("Forwarding attestation to subscribed services", "attestationHash", fmt.Sprintf("%#x", h))
 	// Request the full block data from peer that sent the block hash.
 	ss.attestationService.IncomingAttestationFeed().Send(a)
 }

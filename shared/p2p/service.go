@@ -8,7 +8,9 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/ovcharovvladimir/Prysm/shared/event"
-	"github.com/sirupsen/logrus"
+
+	"github.com/mattn/go-colorable"
+	"github.com/ovcharovvladimir/essentiaHybrid/log"
 
 	floodsub "github.com/libp2p/go-floodsub"
 	libp2p "github.com/libp2p/go-libp2p"
@@ -34,6 +36,8 @@ type Server struct {
 
 // NewServer creates a new p2p server instance.
 func NewServer() (*Server, error) {
+	// Set up the logger
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
 	ctx, cancel := context.WithCancel(context.Background())
 	opts := buildOptions()
 	host, err := libp2p.New(ctx, opts...)
@@ -63,7 +67,7 @@ func NewServer() (*Server, error) {
 func (s *Server) Start() {
 	log.Info("Starting service")
 	if err := startDiscovery(s.ctx, s.host); err != nil {
-		log.Errorf("Could not start p2p discovery! %v", err)
+		log.Error("Could not start p2p discovery!", "err", err)
 		return
 	}
 }
@@ -83,16 +87,14 @@ func (s *Server) Stop() error {
 // The topics can originate from multiple sources. In other words, messages on
 // TopicA may come from direct peer communication or a pub/sub channel.
 func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...Adapter) {
-	log.WithFields(logrus.Fields{
-		"topic": topic,
-	}).Debug("Subscribing to topic")
+	log.Debug("Subscribing to topic", "topic", topic)
 
 	msgType := messageType(message)
 	s.topicMapping[msgType] = topic
 
 	sub, err := s.gsub.Subscribe(topic)
 	if err != nil {
-		log.Errorf("Failed to subscribe to topic: %v", err)
+		log.Error("Failed to subscribe to topic", "err", err)
 		return
 	}
 	feed := s.Feed(message)
@@ -109,12 +111,12 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 			msg, err := sub.Next(s.ctx)
 
 			if s.ctx.Err() != nil {
-				log.WithError(s.ctx.Err()).Debug("Context error")
+				log.Error("Context error")
 				return
 			}
 
 			if err != nil {
-				log.Errorf("Failed to get next message: %v", err)
+				log.Error("Failed to get next message", "err", err)
 				return
 			}
 
@@ -136,23 +138,22 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 func (s *Server) emit(pMsg Message, feed Feed, msg *floodsub.Message, msgType reflect.Type) {
 	d, ok := reflect.New(msgType).Interface().(proto.Message)
 	if !ok {
-		log.Errorf("Received message is not a protobuf message: %s", msgType)
+		log.Error("Received message is not a protobuf message", "msg", msgType)
 		return
 	}
 
 	if err := proto.Unmarshal(msg.Data, d); err != nil {
-		log.Errorf("Failed to decode data: %v", err)
+		log.Error("Failed to decode data", "err", err)
 		return
 	}
 
 	pMsg.Data = d
 
 	i := feed.Send(pMsg)
-	log.WithFields(logrus.Fields{
-		"numSubs": i,
-		"msgType": fmt.Sprintf("%T", d),
-		"msgName": proto.MessageName(d),
-	}).Debug("Emit p2p message to feed subscribers")
+	log.Debug("Emit p2p message to feed subscribers", "numSubs", i,
+		"msgType", fmt.Sprintf("%T", d),
+		"msgName", proto.MessageName(d))
+
 }
 
 // Subscribe returns a subscription to a feed of msg's Type and adds the channels to the feed.
@@ -174,26 +175,24 @@ func (s *Server) Send(msg proto.Message, peer Peer) {
 // Broadcast a message to the world.
 func (s *Server) Broadcast(msg proto.Message) {
 	topic := s.topicMapping[messageType(msg)]
-	log.WithFields(logrus.Fields{
-		"topic": topic,
-	}).Debugf("Broadcasting msg %+v", msg)
+	log.Debug("Broadcasting", "topic", topic, "msg", msg)
 
 	if topic == "" {
-		log.Warnf("Topic is unknown for message type %T. %v", msg, msg)
+		log.Warn("Topic is unknown for message", "msg", msg)
 	}
 
 	m, ok := msg.(proto.Message)
 	if !ok {
-		log.Errorf("Message to broadcast (type: %T) is not a protobuf message: %v", msg, msg)
+		log.Error("Message to broadcast is not a protobuf message", "msg", msg)
 		return
 	}
 
 	b, err := proto.Marshal(m)
 	if err != nil {
-		log.Errorf("Failed to marshal data for broadcast: %v", err)
+		log.Error("Failed to marshal data for broadcast", "err", err)
 		return
 	}
 	if err := s.gsub.Publish(topic, b); err != nil {
-		log.Errorf("Failed to publish to gossipsub topic: %v", err)
+		log.Error("Failed to publish to gossipsub topic", "err", err)
 	}
 }

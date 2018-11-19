@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/mattn/go-colorable"
 	"github.com/ovcharovvladimir/essentiaHybrid/essdb"
-	"github.com/sirupsen/logrus"
+	"github.com/ovcharovvladimir/essentiaHybrid/log"
+	"gopkg.in/urfave/cli.v1"
 )
-
-var log = logrus.WithField("prefix", "db")
 
 // DB defines a service for the beacon chain system's persistent storage.
 type DB struct {
@@ -26,6 +26,7 @@ type DBConfig struct {
 
 // NewDB initializes a beaconDB instance.
 func NewDB(config *DBConfig) (*DB, error) {
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
 	// Uses default cache and handles values.
 	db := &DB{}
 	if config.InMemory {
@@ -35,7 +36,7 @@ func NewDB(config *DBConfig) (*DB, error) {
 
 	_db, err := essdb.NewLDBDatabase(filepath.Join(config.DataDir, config.Name), 16, 16)
 	if err != nil {
-		log.Error(fmt.Sprintf("Could not start beaconDB: %v", err))
+		log.Error("Could not start beaconDB", "err", err)
 		return nil, err
 	}
 	db._db = _db

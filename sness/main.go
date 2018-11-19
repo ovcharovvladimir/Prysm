@@ -5,22 +5,35 @@ import (
 	"os"
 	"runtime"
 
+	"strconv"
+
+	"github.com/mattn/go-colorable"
 	"github.com/ovcharovvladimir/Prysm/shared/cmd"
 	"github.com/ovcharovvladimir/Prysm/shared/debug"
 	"github.com/ovcharovvladimir/Prysm/sness/node"
 	"github.com/ovcharovvladimir/Prysm/sness/utils"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+	"github.com/ovcharovvladimir/essentiaHybrid/log"
+
+	//"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
+)
+
+var (
+	err error
 )
 
 func startNode(ctx *cli.Context) error {
-	verbosity := ctx.GlobalString(cmd.VerbosityFlag.Name)
-	level, err := logrus.ParseLevel(verbosity)
-	if err != nil {
-		return err
+	var verbosity = 3
+	if ctx.IsSet(cmd.VerbosityFlag.Name) {
+		vr := ctx.GlobalString(cmd.VerbosityFlag.Name)
+		verbosity, err = strconv.Atoi(vr)
+		if err != nil {
+			// handle error
+			log.Crit(err.Error())
+		}
 	}
-	logrus.SetLevel(level)
+
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(verbosity), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
 
 	beacon, err := node.NewBeaconNode(ctx)
 	if err != nil {
@@ -31,11 +44,7 @@ func startNode(ctx *cli.Context) error {
 }
 
 func main() {
-	customFormatter := new(prefixed.TextFormatter)
-	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
-	customFormatter.FullTimestamp = true
-	logrus.SetFormatter(customFormatter)
-	log := logrus.WithField("prefix", "main")
+
 	app := cli.NewApp()
 	cli.AppHelpTemplate = `NAME:
    {{.Name}} - {{.Usage}}

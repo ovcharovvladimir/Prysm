@@ -7,13 +7,12 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/mattn/go-colorable"
 	ethereum "github.com/ovcharovvladimir/essentiaHybrid"
 	"github.com/ovcharovvladimir/essentiaHybrid/common"
 	gethTypes "github.com/ovcharovvladimir/essentiaHybrid/core/types"
-	"github.com/sirupsen/logrus"
+	"github.com/ovcharovvladimir/essentiaHybrid/log"
 )
-
-var log = logrus.WithField("prefix", "powchain")
 
 // Reader defines a struct that can fetch latest header events from a web3 endpoint.
 type Reader interface {
@@ -70,6 +69,8 @@ type Web3ServiceConfig struct {
 // NewWeb3Service sets up a new instance with an ethclient when
 // given a web3 endpoint as a string in the config.
 func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig, client Client, reader Reader, logger Logger) (*Web3Service, error) {
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
+
 	if !strings.HasPrefix(config.Endpoint, "ws") && !strings.HasPrefix(config.Endpoint, "ipc") {
 		return nil, fmt.Errorf("web3service requires either an IPC or WebSocket endpoint, provided %s", config.Endpoint)
 	}
@@ -93,9 +94,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig, client Clien
 
 // Start a web3 service's main event loop.
 func (w *Web3Service) Start() {
-	log.WithFields(logrus.Fields{
-		"endpoint": w.endpoint,
-	}).Info("Starting service")
+	log.Info("Starting service", "endpoint", w.endpoint)
 	go w.run(w.ctx.Done())
 }
 
@@ -109,13 +108,13 @@ func (w *Web3Service) Stop() error {
 
 // run subscribes to all the services for the powchain.
 func (w *Web3Service) run(done <-chan struct{}) {
-	log.Infof("Registered :", w.IsValidatorRegistered())
+	log.Info("Registered :", w.IsValidatorRegistered())
 	if w.IsValidatorRegistered() {
-		log.Infof("Registered") //: %v", err)
+		log.Info("Registered") //: %v", err)
 	}
 	headSub, err := w.reader.SubscribeNewHead(w.ctx, w.headerChan)
 	if err != nil {
-		log.Errorf("Unable to subscribe to incoming PoW chain headers: %v", err)
+		log.Error("Unable to subscribe to incoming PoW chain headers: %v", err)
 		return
 	}
 	query := ethereum.FilterQuery{
@@ -127,7 +126,7 @@ func (w *Web3Service) run(done <-chan struct{}) {
 	logSub, err := w.logger.SubscribeFilterLogs(w.ctx, query, w.logChan)
 
 	if err != nil {
-		log.Errorf("Unable to query logs from VRC: %v", err)
+		log.Error("Unable to query logs from VRC: %v", err)
 		return
 	}
 	defer logSub.Unsubscribe()
@@ -147,19 +146,14 @@ func (w *Web3Service) run(done <-chan struct{}) {
 		case header := <-w.headerChan:
 			w.blockNumber = header.Number
 			w.blockHash = header.Hash()
-			log.WithFields(logrus.Fields{
-				"blockNumber": w.blockNumber,
-				"blockHash":   w.blockHash.Hex(),
-			}).Debug("Latest web3 chain event")
+			log.Info("Latest web3 chain event", "blockNumber", w.blockNumber, "blockHash", w.blockHash.Hex())
 
 		case VRClog := <-w.logChan:
 			// public key is the second topic from validatorRegistered log
 			pubKeyLog := VRClog.Topics[1].Hex()
 			// Support user pubKeys with or without the leading 0x
 			if pubKeyLog == w.pubKey || pubKeyLog[2:] == w.pubKey {
-				log.WithFields(logrus.Fields{
-					"publicKey": pubKeyLog,
-				}).Info("Validator registered in VRC with public key")
+				log.Info("Validator registered in VRC with public key", "pubKey", pubKeyLog)
 				w.validatorRegistered = true
 				w.logChan = nil
 			}

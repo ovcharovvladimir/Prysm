@@ -48,9 +48,8 @@ devtools:
 
 
 # Cross Compilation Targets (xgo)
-sn-cross: sness-linux sness-darwin sness-windows sness-android sness-ios
-	@echo "Full cross compilation done:"
-	@ls -ld $(GOBIN)/sness*
+sn-cross: sness-linux sness-darwin sness-windows #sness-android sness-ios
+	@echo "Full cross compilation done"
 
 sn-linux: sn-linux-386 sn-linux-amd64 sn-linux-arm #sn-linux-mips sn-linux-mips64 sn-linux-mips64le
 	@echo "Linux cross compilation done:"

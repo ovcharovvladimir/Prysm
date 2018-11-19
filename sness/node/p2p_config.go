@@ -5,9 +5,9 @@ import (
 	"github.com/ovcharovvladimir/Prysm/shared/cmd"
 	"github.com/ovcharovvladimir/Prysm/shared/p2p"
 	"github.com/ovcharovvladimir/Prysm/shared/p2p/adapter/tracer"
-	"github.com/urfave/cli"
 
 	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/p2p/v1"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var topicMappings = map[pb.Topic]proto.Message{

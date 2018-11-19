@@ -3,16 +3,17 @@ package tracer
 import (
 	"errors"
 
+	"github.com/mattn/go-colorable"
 	"github.com/ovcharovvladimir/Prysm/shared/p2p"
-	"github.com/sirupsen/logrus"
+	"github.com/ovcharovvladimir/essentiaHybrid/log"
 	"go.opencensus.io/exporter/jaeger"
 	"go.opencensus.io/trace"
 )
 
-var log = logrus.WithField("prefix", "tracer")
-
 // New creates and initializes a new tracing adapter.
 func New(name, endpoint string, sampleFraction float64, enable bool) (p2p.Adapter, error) {
+	// Set up the logger
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
 	if !enable {
 		trace.ApplyConfig(trace.Config{DefaultSampler: trace.NeverSample()})
 		return adapter, nil
@@ -24,7 +25,7 @@ func New(name, endpoint string, sampleFraction float64, enable bool) (p2p.Adapte
 
 	trace.ApplyConfig(trace.Config{DefaultSampler: trace.ProbabilitySampler(sampleFraction)})
 
-	log.Infof("Starting Jaeger exporter endpoint at address = %s", endpoint)
+	log.Info("Starting Jaeger exporter endpoint at address = ", endpoint)
 	exporter, err := jaeger.NewExporter(jaeger.Options{
 		Endpoint: endpoint,
 		Process: jaeger.Process{

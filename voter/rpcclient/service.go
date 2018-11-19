@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/mattn/go-colorable"
 	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/rpc/v1"
-	"github.com/sirupsen/logrus"
+	"github.com/ovcharovvladimir/essentiaHybrid/log"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
-
-var log = logrus.WithField("prefix", "rpc-client")
 
 // Service for an RPCClient to a Beacon Node.
 type Service struct {
@@ -31,6 +31,7 @@ type Config struct {
 
 // NewRPCClient sets up a new beacon node RPC client connection.
 func NewRPCClient(ctx context.Context, cfg *Config) *Service {
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:      ctx,
@@ -47,7 +48,7 @@ func (s *Service) Start() {
 	if s.withCert != "" {
 		creds, err := credentials.NewClientTLSFromFile(s.withCert, "")
 		if err != nil {
-			log.Errorf("Could not get valid credentials: %v", err)
+			log.Error("Could not get valid credentials", "err", err)
 			return
 		}
 		server = grpc.WithTransportCredentials(creds)
@@ -57,11 +58,11 @@ func (s *Service) Start() {
 	}
 	providerURL, err := url.Parse(s.endpoint)
 	if err != nil {
-		log.Fatalf("Unable to parse beacon RPC provider endpoint url: %v", err)
+		log.Crit("Unable to parse beacon RPC provider endpoint url", err)
 	}
 	conn, err := grpc.Dial(fmt.Sprintf("[%s]:%s", providerURL.Hostname(), providerURL.Port()), server)
 	if err != nil {
-		log.Errorf("Could not dial endpoint: %s, %v", s.endpoint, err)
+		log.Error("Could not dial", "endpoint", s.endpoint, "err", err)
 		return
 	}
 	s.conn = conn

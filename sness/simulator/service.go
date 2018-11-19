@@ -3,11 +3,12 @@ package simulator
 
 import (
 	"context"
-	"fmt"
+
 	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/mattn/go-colorable"
 
 	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/p2p/v1"
 	"github.com/ovcharovvladimir/Prysm/shared/event"
@@ -16,10 +17,8 @@ import (
 	"github.com/ovcharovvladimir/Prysm/sness/params"
 	"github.com/ovcharovvladimir/Prysm/sness/types"
 	"github.com/ovcharovvladimir/essentiaHybrid/common"
-	"github.com/sirupsen/logrus"
+	"github.com/ovcharovvladimir/essentiaHybrid/log"
 )
-
-var log = logrus.WithField("prefix", "simulator")
 
 type p2pAPI interface {
 	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
@@ -67,6 +66,8 @@ func DefaultConfig() *Config {
 
 // NewSimulator creates a simulator instance for a syncer to consume fake, generated blocks.
 func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
+	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
+
 	ctx, cancel := context.WithCancel(ctx)
 	return &Simulator{
 		ctx:              ctx,
@@ -84,7 +85,7 @@ func (sim *Simulator) Start() {
 	log.Info("Starting service")
 	genesisTime, err := sim.beaconDB.GetGenesisTime()
 	if err != nil {
-		log.Fatal(err)
+		log.Crit(err.Error())
 		return
 	}
 
@@ -109,13 +110,13 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 
 	lastBlock, err := sim.beaconDB.GetChainHead()
 	if err != nil {
-		log.Errorf("Could not fetch latest block: %v", err)
+		log.Error("Could not fetch latest block", "err", err)
 		return
 	}
 
 	lastHash, err := lastBlock.Hash()
 	if err != nil {
-		log.Errorf("Could not get hash of the latest block: %v", err)
+		log.Error("Could not get hash of the latest block", "err", err.Error())
 	}
 	broadcastedBlocks := map[[32]byte]*types.Block{}
 
@@ -127,24 +128,24 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 		case slot := <-slotInterval:
 			aState, err := sim.beaconDB.GetActiveState()
 			if err != nil {
-				log.Errorf("Failed to get active state: %v", err)
+				log.Error("Failed to get active state", "err", err.Error())
 				continue
 			}
 			cState, err := sim.beaconDB.GetCrystallizedState()
 			if err != nil {
-				log.Errorf("Failed to get crystallized state: %v", err)
+				log.Error("Failed to get crystallized state", "err", err.Error())
 				continue
 			}
 
 			aStateHash, err := aState.Hash()
 			if err != nil {
-				log.Errorf("Failed to hash active state: %v", err)
+				log.Error("Failed to hash active state", "err", err.Error())
 				continue
 			}
 
 			cStateHash, err := cState.Hash()
 			if err != nil {
-				log.Errorf("Failed to hash crystallized state: %v", err)
+				log.Error("Failed to hash crystallized state", "err", err.Error())
 				continue
 			}
 
@@ -172,17 +173,13 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 
 			hash, err := block.Hash()
 			if err != nil {
-				log.Errorf("Could not hash simulated block: %v", err)
+				log.Error("Could not hash simulated block", "err", err.Error())
 				continue
 			}
 			sim.p2p.Broadcast(&pb.BeaconBlockHashAnnounce{
 				Hash: hash[:],
 			})
-
-			log.WithFields(logrus.Fields{
-				"hash": fmt.Sprintf("%#x", hash),
-				"slot": slot,
-			}).Debug("Broadcast block hash")
+			log.Info("Broadcast block hash", "hash", hash, "slot", slot)
 
 			broadcastedBlocks[hash] = block
 			lastHash = hash
@@ -193,13 +190,10 @@ func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Mes
 
 			block := broadcastedBlocks[hash]
 			if block == nil {
-				log.Errorf("Requested block not found: %#x", hash)
+				log.Error("Requested block not found", "hash", hash)
 				continue
 			}
-
-			log.WithFields(logrus.Fields{
-				"hash": fmt.Sprintf("%#x", hash),
-			}).Debug("Responding to full block request")
+			log.Info("Responding to full block request", "hash", hash)
 
 			// Sends the full block body to the requester.
 			res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: &pb.AggregatedAttestation{

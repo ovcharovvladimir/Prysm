@@ -9,6 +9,7 @@ import (
 	"github.com/ovcharovvladimir/Prysm/shared/bitutil"
 	"github.com/ovcharovvladimir/Prysm/shared/hashutil"
 	"github.com/ovcharovvladimir/Prysm/sness/params"
+	"github.com/ovcharovvladimir/essentiaHybrid/log"
 )
 
 const bitsInByte = 8
@@ -77,8 +78,7 @@ func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, 
 func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIndices []uint32) bool {
 	// Validate attester bit field has the correct length.
 	if bitutil.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
-		log.Debugf("attestation has incorrect bitfield length. Found %v, expected %v",
-			len(attestation.AttesterBitfield), bitutil.BitLength(len(attesterIndices)))
+		log.Debug("attestation has incorrect bitfield length.", "found", len(attestation.AttesterBitfield), "expected", bitutil.BitLength(len(attesterIndices)))
 		return false
 	}
 
@@ -92,7 +92,7 @@ func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIn
 	for i := 0; i < bitsInByte-remainingBits; i++ {
 		isBitSet, err := bitutil.CheckBit(attestation.AttesterBitfield, lastBit+i)
 		if err != nil {
-			log.Errorf("Bitfield check failed for attestation at index: %d with: %v", lastBit+i, err)
+			log.Error("Bitfield check failed for attestation at", "index", lastBit+i, "with", err.Error())
 			return false
 		}
 
