@@ -1,51 +1,35 @@
-// Package sness defines all the utlities needed for a beacon chain node.
 package main
 
 import (
 	"os"
 	"runtime"
 
-	"strconv"
-
-	"github.com/mattn/go-colorable"
 	"github.com/ovcharovvladimir/Prysm/shared/cmd"
 	"github.com/ovcharovvladimir/Prysm/shared/debug"
 	"github.com/ovcharovvladimir/Prysm/sness/node"
 	"github.com/ovcharovvladimir/Prysm/sness/utils"
-	"github.com/ovcharovvladimir/essentiaHybrid/log"
-
-	//"github.com/urfave/cli"
-	"gopkg.in/urfave/cli.v1"
-)
-
-var (
-	err error
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 func startNode(ctx *cli.Context) error {
-	var verbosity = 3
-	if ctx.IsSet(cmd.VerbosityFlag.Name) {
-		vr := ctx.GlobalString(cmd.VerbosityFlag.Name)
-		verbosity, err = strconv.Atoi(vr)
-		if err != nil {
-			// handle error
-			log.Crit(err.Error())
-		}
-	}
-
-	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(verbosity), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
-
-	beacon, err := node.NewBeaconNode(ctx)
+	shardingNode, err := node.New(ctx)
 	if err != nil {
 		return err
 	}
-	beacon.Start()
+
+	shardingNode.Start()
 	return nil
 }
 
 func main() {
+	customFormatter := new(prefixed.TextFormatter)
+	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
+	customFormatter.FullTimestamp = true
+	logrus.SetFormatter(customFormatter)
+	log := logrus.WithField("prefix", "main")
 
-	app := cli.NewApp()
 	cli.AppHelpTemplate = `NAME:
    {{.Name}} - {{.Usage}}
 USAGE:
@@ -64,40 +48,23 @@ VERSION:
    {{.Version}}
    {{end}}
 `
-	app.Name = "sness"
-	app.Usage = "this is a supernode implementation for Essentia"
-	app.Action = startNode
 
-	app.Flags = []cli.Flag{
-		utils.DemoConfigFlag,
-		utils.SimulatorFlag,
-		utils.VrcContractFlag,
-		utils.PubKeyFlag,
-		utils.Web3ProviderFlag,
-		utils.RPCPort,
-		utils.CertFlag,
-		utils.KeyFlag,
-		utils.GenesisJSON,
-		utils.EnableCrossLinks,
-		utils.EnableRewardChecking,
-		utils.EnableAttestationValidity,
-		utils.EnablePOWChain,
-		cmd.DataDirFlag,
-		cmd.VerbosityFlag,
-		cmd.EnableTracingFlag,
-		cmd.TracingEndpointFlag,
-		cmd.TraceSampleFractionFlag,
-		debug.PProfFlag,
-		debug.PProfAddrFlag,
-		debug.PProfPortFlag,
-		debug.MemProfileRateFlag,
-		debug.CPUProfileFlag,
-		debug.TraceFlag,
-	}
+	app := cli.NewApp()
+	app.Version = "0.1.0"
+	app.Name = "sharding"
+	app.Usage = `Essentia supernode that interacts with a beacon chain, starts proposer services, shardp2p connections, etc.
+`
+	app.Action = startNode
+	app.Flags = []cli.Flag{utils.ModeFlag, cmd.VerbosityFlag, cmd.DataDirFlag, cmd.PasswordFileFlag, cmd.NetworkIdFlag, cmd.IPCPathFlag, utils.DepositFlag, utils.ShardIDFlag, debug.PProfFlag, debug.PProfAddrFlag, debug.PProfPortFlag, debug.MemProfileRateFlag, debug.CPUProfileFlag, debug.TraceFlag}
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())
 		return debug.Setup(ctx)
+	}
+
+	app.After = func(ctx *cli.Context) error {
+		debug.Exit()
+		return nil
 	}
 
 	if err := app.Run(os.Args); err != nil {

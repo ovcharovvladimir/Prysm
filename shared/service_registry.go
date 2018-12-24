@@ -2,21 +2,9 @@ package shared
 
 import (
 	"fmt"
+	"log"
 	"reflect"
-
-	"github.com/mattn/go-colorable"
-	"github.com/ovcharovvladimir/essentiaHybrid/log"
 )
-
-// Service is a struct that can be registered into a ServiceRegistry for
-// easy dependency management.
-type Service interface {
-	// Start spawns any goroutines required by the service.
-	Start()
-	// Stop terminates all goroutines belonging to the service,
-	// blocking until they are all terminated.
-	Stop() error
-}
 
 // ServiceRegistry provides a useful pattern for managing services.
 // It allows for ease of dependency management and ensures services
@@ -28,8 +16,6 @@ type ServiceRegistry struct {
 
 // NewServiceRegistry starts a registry instance for convenience
 func NewServiceRegistry() *ServiceRegistry {
-	// Set up the logger
-	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
 	return &ServiceRegistry{
 		services: make(map[reflect.Type]Service),
 	}
@@ -42,14 +28,11 @@ func (s *ServiceRegistry) StartAll() {
 	}
 }
 
-// StopAll ends every service in reverse order of registration, logging a
-// panic if any of them fail to stop.
+// StopAll ends every service, logging a panic if any of them fail to stop.
 func (s *ServiceRegistry) StopAll() {
-	for i := len(s.serviceTypes) - 1; i >= 0; i-- {
-		kind := s.serviceTypes[i]
-		service := s.services[kind]
+	for kind, service := range s.services {
 		if err := service.Stop(); err != nil {
-			log.Crit("Could not stop the following service", kind, "err", err)
+			log.Panicf("Could not stop the following service: %v, %v", kind, err)
 		}
 	}
 }

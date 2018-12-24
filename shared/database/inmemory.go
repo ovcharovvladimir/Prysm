@@ -6,7 +6,10 @@ import (
 
 	"github.com/ovcharovvladimir/essentiaHybrid/common"
 	"github.com/ovcharovvladimir/essentiaHybrid/essdb"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.WithField("prefix", "db")
 
 // KVStore is an in-memory mapping of hashes to RLP encoded values.
 type KVStore struct {
@@ -56,13 +59,15 @@ func (s *KVStore) Delete(k []byte) error {
 	return nil
 }
 
-// Close satisfies ethdb.Database.
+// Close satisfies essdb.Database.
 func (s *KVStore) Close() {
+	//TODO: Implement Close for KVStore
 	log.Debug("ShardKV Close() isnt implemented yet")
 }
 
-// NewBatch satisfies ethdb.Database.
+// NewBatch satisfies essdb.Database.
 func (s *KVStore) NewBatch() essdb.Batch {
+	//TODO: Implement NewBatch for KVStore
 	log.Debug("ShardKV NewBatch() isnt implemented yet")
 	return nil
 }

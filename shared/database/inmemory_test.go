@@ -6,7 +6,7 @@ import (
 	"github.com/ovcharovvladimir/essentiaHybrid/essdb"
 )
 
-// Verifies that KVStore implements the ethdb interface.
+// Verifies that KVStore implements the essdb interface.
 var _ = essdb.Database(&KVStore{})
 
 func Test_KVStorePut(t *testing.T) {

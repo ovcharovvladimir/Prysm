@@ -1,4 +1,4 @@
-// Package legacyutil exists to convert Ethererum 2.0 types to go-ethereum or
+// This package exists to convert Ethererum 2.0 types to go-ethereum or
 // Ethereum 1.0 types.
 package legacyutil
 
@@ -7,7 +7,7 @@ import (
 
 	"github.com/ovcharovvladimir/essentiaHybrid/common"
 	gethTypes "github.com/ovcharovvladimir/essentiaHybrid/core/types"
-	pb "github.com/ovcharovvladimir/Prysm/proto/sharding/p2p/v1"
+	pb "github.com/ovcharovvladimir/Prysm/proto/sharding/v1"
 )
 
 // TransformTransaction of proto transaction to geth's transction.

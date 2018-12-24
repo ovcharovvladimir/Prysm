@@ -2,17 +2,23 @@ package simulator
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io/ioutil"
+	"math/big"
+	"strings"
 	"testing"
+	"time"
 
-	"github.com/golang/protobuf/proto"
-	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/p2p/v1"
-	"github.com/ovcharovvladimir/Prysm/shared/event"
-	"github.com/ovcharovvladimir/Prysm/shared/p2p"
-	"github.com/ovcharovvladimir/Prysm/shared/testutil"
-	"github.com/ovcharovvladimir/Prysm/sness/db"
-	btestutil "github.com/ovcharovvladimir/Prysm/sness/testutil"
+	"github.com/ethereum/go-ethereum"
+	"github.com/ovcharovvladimir/essentiaHybrid/accounts/abi/bind"
 	"github.com/ovcharovvladimir/essentiaHybrid/common"
+	gethTypes "github.com/ovcharovvladimir/essentiaHybrid/core/types"
+	"github.com/ovcharovvladimir/Prysm/sness/mainchain"
+	"github.com/ovcharovvladimir/Prysm/sness/params"
+	"github.com/ovcharovvladimir/Prysm/sness/types"
+	"github.com/ovcharovvladimir/Prysm/shared"
+	"github.com/ovcharovvladimir/Prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -22,121 +28,316 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-type mockP2P struct {
-	broadcastHash []byte
+var _ = shared.Service(&Simulator{})
+
+type faultyReader struct{}
+type goodReader struct {
+	blockNumber int64
 }
 
-func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription {
-	return new(event.Feed).Subscribe(channel)
+type faultyVRCCaller struct{}
+type goodVRCCaller struct {
+	collationRecordsArgs []interface{}
 }
 
-func (mp *mockP2P) Broadcast(msg proto.Message) {
-	mp.broadcastHash = msg.(*pb.BeaconBlockHashAnnounce).GetHash()
+func (f *faultyVRCCaller) CollationRecords(opts *bind.CallOpts, arg0 *big.Int, arg1 *big.Int) (struct {
+	ChunkRoot [32]byte
+	Proposer  common.Address
+	IsElected bool
+	Signature [32]byte
+}, error) {
+	res := new(struct {
+		ChunkRoot [32]byte
+		Proposer  common.Address
+		IsElected bool
+		Signature [32]byte
+	})
+	return *res, errors.New("error fetching collation record")
 }
 
-func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {}
+func (g *goodVRCCaller) CollationRecords(opts *bind.CallOpts, shardID *big.Int, period *big.Int) (struct {
+	ChunkRoot [32]byte
+	Proposer  common.Address
+	IsElected bool
+	Signature [32]byte
+}, error) {
 
-type mockPOWChainService struct{}
+	g.collationRecordsArgs = []interface{}{opts, shardID, period}
 
-func (mpow *mockPOWChainService) LatestBlockHash() common.Hash {
-	return common.BytesToHash([]byte{})
+	res := new(struct {
+		ChunkRoot [32]byte
+		Proposer  common.Address
+		IsElected bool
+		Signature [32]byte
+	})
+	body := []byte{1, 2, 3, 4, 5}
+	res.ChunkRoot = [32]byte(gethTypes.DeriveSha(types.Chunks(body)))
+	res.Proposer = common.BytesToAddress([]byte{})
+	res.IsElected = false
+	return *res, nil
 }
 
-func setupSimulator(t *testing.T, beaconDB *db.BeaconDB) (*Simulator, *mockP2P) {
-	ctx := context.Background()
-
-	p2pService := &mockP2P{}
-
-	err := beaconDB.InitializeState(nil)
-	if err != nil {
-		t.Fatalf("Failed to initialize state: %v", err)
-	}
-
-	cfg := &Config{
-		BlockRequestBuf: 0,
-		P2P:             p2pService,
-		Web3Service:     &mockPOWChainService{},
-		BeaconDB:        beaconDB,
-		EnablePOWChain:  true,
-	}
-
-	return NewSimulator(ctx, cfg), p2pService
+func (f *faultyReader) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
+	return nil, fmt.Errorf("cannot fetch block by number")
 }
 
-func TestLifecycle(t *testing.T) {
+func (f *faultyReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
+	return nil, nil
+}
+
+func (g *goodReader) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
+	return gethTypes.NewBlock(&gethTypes.Header{Number: big.NewInt(g.blockNumber)}, nil, nil, nil), nil
+}
+
+func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
+	return nil, nil
+}
+
+func TestStartStop(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := btestutil.SetupDB(t)
-	defer btestutil.TeardownDB(t, db)
-	sim, _ := setupSimulator(t, db)
+	shardID := 0
+	server, err := p2p.NewServer()
+	if err != nil {
+		t.Fatalf("Unable to setup p2p server: %v", err)
+	}
 
-	sim.Start()
-	testutil.AssertLogsContain(t, hook, "Starting service")
-	sim.Stop()
-	testutil.AssertLogsContain(t, hook, "Stopping service")
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.VRCClient{}, server, shardID, 1*time.Second)
+	if err != nil {
+		t.Fatalf("Unable to setup simulator service: %v", err)
+	}
+
+	simulator.Start()
+	msg := hook.LastEntry().Message
+	if msg != "Starting simulator service" {
+		t.Errorf("incorrect log, expected %s, got %s", "Starting simulator service", msg)
+	}
+
+	if err := simulator.Stop(); err != nil {
+		t.Fatalf("Unable to stop simulator service: %v", err)
+	}
+
+	msg = hook.LastEntry().Message
+	if msg != "Stopping simulator service" {
+		t.Errorf("incorrect log, expected %s, got %s", "Stopping simulator service", msg)
+	}
 
 	// The context should have been canceled.
-	if sim.ctx.Err() == nil {
-		t.Error("context was not canceled")
+	if simulator.ctx.Err() == nil {
+		t.Error("Context was not canceled")
 	}
+	hook.Reset()
 }
 
-func TestBroadcastBlockHash(t *testing.T) {
+// This test uses a faulty chain reader in order to trigger an error
+// in the simulateNotaryRequests goroutine when reading the block number from
+// the mainchain via RPC.
+func TestSimulateNotaryRequests_FaultyReader(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	db := btestutil.SetupDB(t)
-	defer btestutil.TeardownDB(t, db)
-	sim, p2pService := setupSimulator(t, db)
+	shardID := 0
+	server, err := p2p.NewServer()
+	if err != nil {
+		t.Fatalf("Unable to setup p2p server: %v", err)
+	}
 
-	slotChan := make(chan uint64)
-	requestChan := make(chan p2p.Message)
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.VRCClient{}, server, shardID, 0)
+	if err != nil {
+		t.Fatalf("Unable to setup simulator service: %v", err)
+	}
+
+	delayChan := make(chan time.Time)
+	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
-
 	go func() {
-		sim.run(slotChan, requestChan)
+		simulator.simulateNotaryRequests(&goodVRCCaller{}, &faultyReader{}, delayChan, doneChan)
 		<-exitRoutine
 	}()
 
-	// trigger a new block
-	slotChan <- 1
+	delayChan <- time.Time{}
+	doneChan <- struct{}{}
 
-	// test an invalid block request
-	requestChan <- p2p.Message{
-		Data: &pb.BeaconBlockRequest{
-			Hash: make([]byte, 32),
-		},
+	msg := hook.LastEntry().Message
+	want := "Could not fetch current block number: cannot fetch block by number"
+	if msg != want {
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 
-	// test a valid block request
-	blockHash := p2pService.broadcastHash
-	requestChan <- p2p.Message{
-		Data: &pb.BeaconBlockRequest{
-			Hash: blockHash,
-		},
-	}
-
-	// trigger another block
-	slotChan <- 2
-
-	testutil.AssertLogsContain(t, hook, "Broadcast block hash")
-	testutil.AssertLogsContain(t, hook, "Requested block not found")
-	testutil.AssertLogsContain(t, hook, "Responding to full block request")
-
-	// reset logs
-	hook.Reset()
-
-	// ensure that another request for the same block can't be made
-	requestChan <- p2p.Message{
-		Data: &pb.BeaconBlockRequest{
-			Hash: blockHash,
-		},
-	}
-
-	sim.cancel()
 	exitRoutine <- true
+	hook.Reset()
+}
 
-	testutil.AssertLogsContain(t, hook, "Requested block not found")
-	testutil.AssertLogsDoNotContain(t, hook, "Responding to full block request")
+// This test uses a faulty VRCCaller in order to trigger an error
+// in the simulateNotaryRequests goroutine when reading the collation records
+// from the VRC.
+func TestSimulateNotaryRequests_FaultyCaller(t *testing.T) {
+	hook := logTest.NewGlobal()
 
+	shardID := 0
+	server, err := p2p.NewServer()
+	if err != nil {
+		t.Fatalf("Unable to setup p2p server: %v", err)
+	}
+
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.VRCClient{}, server, shardID, 0)
+	if err != nil {
+		t.Fatalf("Unable to setup simulator service: %v", err)
+	}
+
+	delayChan := make(chan time.Time)
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
+	go func() {
+		simulator.simulateNotaryRequests(&faultyVRCCaller{}, &goodReader{}, delayChan, doneChan)
+		<-exitRoutine
+	}()
+
+	delayChan <- time.Time{}
+	doneChan <- struct{}{}
+
+	msg := hook.AllEntries()[0].Message
+	want := "Error constructing collation body request: could not fetch collation record from VRC: error fetching collation record"
+	if msg != want {
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
+	}
+
+	exitRoutine <- true
+	hook.Reset()
+}
+
+// This test checks the proper functioning of the simulateNotaryRequests goroutine
+// by listening to the requestSent channel which occurs after successful
+// construction and sending of a request via p2p.
+func TestSimulateNotaryRequests(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	shardID := 0
+	server, err := p2p.NewServer()
+	if err != nil {
+		t.Fatalf("Unable to setup p2p server: %v", err)
+	}
+
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.VRCClient{}, server, shardID, 0)
+	if err != nil {
+		t.Fatalf("Unable to setup simulator service: %v", err)
+	}
+
+	delayChan := make(chan time.Time)
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
+
+	vrcCaller := &goodVRCCaller{}
+
+	go func() {
+		simulator.simulateNotaryRequests(vrcCaller, &goodReader{}, delayChan, doneChan)
+		<-exitRoutine
+	}()
+
+	delayChan <- time.Time{}
+	doneChan <- struct{}{}
+
+	msg := hook.Entries[1].Message
+	want := "Sent request for collation body via a shardp2p broadcast"
+	if msg != want {
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
+	}
+
+	exitRoutine <- true
+	hook.Reset()
+}
+
+func TestSimulateNotaryRequests_previousPeriod(t *testing.T) {
+	tests := []struct {
+		want        int64
+		blockNumber int64
+	}{
+		{
+			want:        0,
+			blockNumber: 0,
+		},
+		{
+			want:        0,
+			blockNumber: params.DefaultConfig.PeriodLength,
+		}, {
+			want:        0,
+			blockNumber: params.DefaultConfig.PeriodLength + 1,
+		},
+		{
+			want:        1,
+			blockNumber: params.DefaultConfig.PeriodLength * 2,
+		},
+	}
+
+	shardID := 0
+	server, err := p2p.NewServer()
+	if err != nil {
+		t.Fatalf("Unable to setup p2p server: %v", err)
+	}
+	for _, tt := range tests {
+		simulator, err := NewSimulator(params.DefaultConfig, &mainchain.VRCClient{}, server, shardID, 0)
+		if err != nil {
+			t.Fatalf("Unable to setup simulator service: %v", err)
+		}
+
+		delayChan := make(chan time.Time)
+		doneChan := make(chan struct{})
+		exitRoutine := make(chan bool)
+
+		vrcCaller := &goodVRCCaller{}
+		reader := &goodReader{blockNumber: tt.blockNumber}
+
+		go func() {
+			simulator.simulateNotaryRequests(vrcCaller, reader, delayChan, doneChan)
+			<-exitRoutine
+		}()
+
+		delayChan <- time.Time{}
+		doneChan <- struct{}{}
+
+		period := vrcCaller.collationRecordsArgs[2].(*big.Int)
+
+		if period.Cmp(big.NewInt(tt.want)) != 0 {
+			t.Errorf("Expected period %v but got %v", tt.want, period)
+		}
+
+		exitRoutine <- true
+	}
+}
+
+// This test verifies actor simulator can successfully broadcast
+// transactions to rest of the peers.
+func TestBroadcastTransactions(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	shardID := 0
+	server, err := p2p.NewServer()
+	if err != nil {
+		t.Fatalf("Unable to setup p2p server: %v", err)
+	}
+
+	simulator, err := NewSimulator(params.DefaultConfig, &mainchain.VRCClient{}, server, shardID, 1*time.Second)
+	if err != nil {
+		t.Fatalf("Unable to setup simulator service: %v", err)
+	}
+
+	delayChan := make(chan time.Time)
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
+
+	go func() {
+		simulator.broadcastTransactions(delayChan, doneChan)
+		<-exitRoutine
+	}()
+
+	delayChan <- time.Time{}
+	doneChan <- struct{}{}
+
+	msg := hook.Entries[1].Message
+	want := "Transaction broadcasted"
+	if !strings.Contains(msg, want) {
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
+	}
+
+	exitRoutine <- true
 	hook.Reset()
 }

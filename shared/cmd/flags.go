@@ -1,4 +1,3 @@
-// Package cmd defines the command line flags for the shared utlities.
 package cmd
 
 import (
@@ -7,7 +6,7 @@ import (
 )
 
 var (
-	// VerbosityFlag defines the log configuration.
+	// VerbosityFlag defines the logrus configuration.
 	VerbosityFlag = cli.StringFlag{
 		Name:  "verbosity",
 		Usage: "Logging verbosity (debug, info=default, warn, error, fatal, panic)",
@@ -24,8 +23,8 @@ var (
 		Usage: "Data directory for the databases and keystore",
 		Value: DirectoryString{node.DefaultDataDir()},
 	}
-	// NetworkIDFlag defines the specific network identifier.
-	NetworkIDFlag = cli.Uint64Flag{
+	// NetworkIdFlag defines the specific network identifier.
+	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
 		Usage: "Network identifier (integer, 1=Frontier, 2=Morden (disused), 3=Ropsten, 4=Rinkeby)",
 		Value: 1,
@@ -35,29 +34,5 @@ var (
 		Name:  "password",
 		Usage: "Password file to use for non-interactive password input",
 		Value: "",
-	}
-	// RPCProviderFlag defines a http endpoint flag to connect to mainchain.
-	RPCProviderFlag = cli.StringFlag{
-		Name:  "rpc",
-		Usage: "HTTP-RPC server end point to use to connect to mainchain.",
-		Value: "http://localhost:8545/",
-	}
-	// EnableTracingFlag defines a flag to enable p2p message tracing.
-	EnableTracingFlag = cli.BoolFlag{
-		Name:  "enable-tracing",
-		Usage: "Enable request tracing.",
-	}
-	// TracingEndpointFlag flag defines the http enpoint for serving traces to Jaeger.
-	TracingEndpointFlag = cli.StringFlag{
-		Name:  "tracing-endpoint",
-		Usage: "Tracing endpoint defines where beacon chain traces are exposed to Jaeger.",
-		Value: "http://127.0.0.1:14268",
-	}
-	// TraceSampleFractionFlag defines a flag to indicate what fraction of p2p
-	// messages are sampled for tracing.
-	TraceSampleFractionFlag = cli.Float64Flag{
-		Name:  "trace-sample-fraction",
-		Usage: "Indicate what fraction of p2p messages are sampled for tracing.",
-		Value: 0.20,
 	}
 )

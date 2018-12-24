@@ -1,82 +1,26 @@
 package utils
 
 import (
+	"math/big"
+
+	shardparams "github.com/ovcharovvladimir/Prysm/sness/params"
 	"github.com/urfave/cli"
 )
 
 var (
-	// DemoConfigFlag determines whether to launch a beacon chain using demo parameters
-	// such as shorter cycle length, fewer shards, and more.
-	DemoConfigFlag = cli.BoolFlag{
-		Name:  "demo-config",
-		Usage: " Run the beacon node using demo paramteres (i.e. shorter cycles, fewer shards and committees)",
+	// DepositFlag defines whether a node will withdraw ESS from the user's account.
+	DepositFlag = cli.BoolFlag{
+		Name:  "deposit",
+		Usage: "To become a voter in a sharding node, " + new(big.Int).Div(shardparams.DefaultConfig.NotaryDeposit, new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)).String() + " ETH will be deposited into VRC",
 	}
-	// SimulatorFlag determines if a node will run only as a simulator service.
-	SimulatorFlag = cli.BoolFlag{
-		Name:  "simulator",
-		Usage: "Whether or not to run the node as a simple simulator of beacon blocks over p2p",
+	// ModeFlag defines the role of the sharding client. Either proposer, voter, or simulator.
+	ModeFlag = cli.StringFlag{
+		Name:  "mode",
+		Usage: `use the --mode voter or --actor proposer to start a voter or proposer service in the sharding node. If omitted, the sharding node registers an Observer service that simply observes the activity in the sharded network`,
 	}
-	// Web3ProviderFlag defines a flag for a mainchain RPC endpoint.
-	Web3ProviderFlag = cli.StringFlag{
-		Name:  "web3provider",
-		Usage: "A mainchain web3 provider string endpoint. Can either be an IPC file string or a WebSocket endpoint. Uses WebSockets by default at ws://127.0.0.1:8546. Cannot be an HTTP endpoint.",
-		Value: "ws://127.0.0.1:8546",
-	}
-	// VrcContractFlag defines a flag for VRC contract address.
-	VrcContractFlag = cli.StringFlag{
-		Name:  "vrcaddr",
-		Usage: "Validator registration contract address. Beacon chain node will listen logs coming from VRC to determine when validator is eligible to participate.",
-	}
-	// PubKeyFlag defines a flag for validator's public key on the mainchain
-	PubKeyFlag = cli.StringFlag{
-		Name:  "pubkey",
-		Usage: "Validator's public key. Beacon chain node will listen to VRC log to determine when registration has completed based on this public key address.",
-	}
-	// RPCPort defines a beacon node RPC port to open.
-	RPCPort = cli.StringFlag{
-		Name:  "rpc-port",
-		Usage: "RPC port exposed by a beacon node",
-		Value: "4000",
-	}
-	// CertFlag defines a flag for the node's TLS certificate.
-	CertFlag = cli.StringFlag{
-		Name:  "tls-cert",
-		Usage: "Certificate for secure gRPC. Pass this and the tls-key flag in order to use gRPC securely.",
-	}
-	// KeyFlag defines a flag for the node's TLS key.
-	KeyFlag = cli.StringFlag{
-		Name:  "tls-key",
-		Usage: "Key for secure gRPC. Pass this and the tls-cert flag in order to use gRPC securely.",
-	}
-	// GenesisJSON defines a flag for bootstrapping validators from genesis JSON.
-	// If this flag is not specified, beacon node will bootstrap validators from code from crystallized_state.go.
-	GenesisJSON = cli.StringFlag{
-		Name:  "genesis-json",
-		Usage: "Beacon node will bootstrap genesis state defined in genesis.json",
-	}
-	// EnablePOWChain tells the beacon node to use a real web3 endpoint. Disabled by default.
-	EnablePOWChain = cli.BoolFlag{
-		Name:  "enable-powchain",
-		Usage: "Enable a real, web3 proof-of-work chain endpoint in the beacon node",
-	}
-	// EnableCrossLinks tells the beacon node to enable the verification of shard cross-links
-	// during block processing. Disabled by default.
-	EnableCrossLinks = cli.BoolFlag{
-		Name:  "enable-cross-links",
-		Usage: "Enable cross-link verification in the beacon chain",
-	}
-	// EnableRewardChecking tells the beacon node to apply Casper FFG rewards/penalties to validators
-	// at each cycle transition. This can mutate the validator set as bad validators can get kicked off.
-	// Disabled by default.
-	EnableRewardChecking = cli.BoolFlag{
-		Name:  "enable-reward-checking",
-		Usage: "Enable Casper FFG reward/penalty applications at each cycle transition",
-	}
-	// EnableAttestationValidity in the beacon node. This enables a few more verification
-	// conditions during block processing and the creation of a block vote cache
-	// for attestations. Disabled by default.
-	EnableAttestationValidity = cli.BoolFlag{
-		Name:  "enable-attestations-validity",
-		Usage: "Enable the verification of attestation validity in a beacon node",
+	// ShardIDFlag specifies which shard to listen to.
+	ShardIDFlag = cli.IntFlag{
+		Name:  "shardid",
+		Usage: `use the --shardid to determine which shard to start p2p server, listen for incoming transactions and perform proposer/observer duties`,
 	}
 )

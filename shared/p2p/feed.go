@@ -1,11 +1,12 @@
 package p2p
 
 import (
-	"github.com/golang/protobuf/proto"
-	"github.com/ovcharovvladimir/Prysm/shared/event"
+	"reflect"
+
+	"github.com/ovcharovvladimir/essentiaHybrid/event"
 )
 
-// Feed is a one to many subscription feed of the argument type.
+// P2P feed is a one to many subscription feed of the argument type.
 //
 // Messages received via p2p protocol are sent to subscribers by these event
 // feeds. Message consumers should not use event feeds to reply to or broadcast
@@ -16,34 +17,26 @@ import (
 // contains information about the sender, aka the peer, and the message payload
 // itself.
 //
-//   feed, err := ps.Feed(&pb.MyMessage{})
+//   feed, err := ps.Feed(MyMessage{})
 //   ch := make(chan p2p.Message, 100) // Choose a reasonable buffer size!
 //   sub := feed.Subscribe(ch)
 //
 //   // Wait until my message comes from a peer.
 //   msg := <- ch
 //   fmt.Printf("Message received: %v", msg.Data)
-func (s *Server) Feed(msg proto.Message) Feed {
-	t := messageType(msg)
+func (s *Server) Feed(msg interface{}) *event.Feed {
+	var t reflect.Type
 
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	// Support passing reflect.Type as the msg.
+	switch msg.(type) {
+	case reflect.Type:
+		t = msg.(reflect.Type)
+	default:
+		t = reflect.TypeOf(msg)
+	}
+
 	if s.feeds[t] == nil {
 		s.feeds[t] = new(event.Feed)
 	}
-
 	return s.feeds[t]
-}
-
-// Feed implements one-to-many subscriptions where the carrier of events is a channel.
-// Values sent to a Feed are delivered to all subscribed channels simultaneously.
-//
-// Feeds can only be used with a single type. The type is determined by the first Send or
-// Subscribe operation. Subsequent calls to these methods panic if the type does not
-// match.
-//
-// Implemented by https://github.com/ovcharovvladimir/essentiaHybrid/blob/HEAD/event/feed.go
-type Feed interface {
-	Subscribe(channel interface{}) event.Subscription
-	Send(value interface{}) (nsent int)
 }

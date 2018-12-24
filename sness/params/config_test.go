@@ -1,54 +1,52 @@
 package params
 
 import (
+	"math/big"
 	"testing"
 )
 
-func TestValidatorStatusCode(t *testing.T) {
-	tests := []struct {
-		a ValidatorStatusCode
-		b int
-	}{
-		{a: PendingActivation, b: 0},
-		{a: Active, b: 1},
-		{a: PendingExit, b: 2},
-		{a: PendingWithdraw, b: 3},
-		{a: Withdrawn, b: 4},
-		{a: Penalized, b: 128},
+func TestNotaryDeposit(t *testing.T) {
+	want, err := new(big.Int).SetString("1000000000000000000000", 10) // 1000 ESS
+	if !err {
+		t.Fatalf("Failed to setup test")
 	}
-	for _, tt := range tests {
-		if int(tt.a) != tt.b {
-			t.Errorf("Incorrect validator status code. Wanted: %d, Got: %d", int(tt.a), tt.b)
-		}
+	if DefaultConfig.NotaryDeposit.Cmp(want) != 0 {
+		t.Errorf("Notary deposit size incorrect. Wanted %d, got %d", want, DefaultConfig.NotaryDeposit)
 	}
 }
 
-func TestSpecialRecordTypes(t *testing.T) {
-	tests := []struct {
-		a SpecialRecordType
-		b int
-	}{
-		{a: Logout, b: 0},
-		{a: CasperSlashing, b: 1},
-	}
-	for _, tt := range tests {
-		if int(tt.a) != tt.b {
-			t.Errorf("Incorrect special record types. Wanted: %d, Got: %d", int(tt.a), tt.b)
-		}
+func TestPeriodLength(t *testing.T) {
+	if DefaultConfig.PeriodLength != 5 {
+		t.Errorf("Shard count incorrect. Wanted %d, got %d", 5, DefaultConfig.PeriodLength)
 	}
 }
 
-func TestValidatorSetDeltaFlags(t *testing.T) {
-	tests := []struct {
-		a ValidatorSetDeltaFlags
-		b int
-	}{
-		{a: Entry, b: 0},
-		{a: Exit, b: 1},
+func TestNotaryLockupLength(t *testing.T) {
+	if DefaultConfig.NotaryLockupLength != 16128 {
+		t.Errorf("Shard count incorrect. Wanted %d, got %d", 16128, DefaultConfig.NotaryLockupLength)
 	}
-	for _, tt := range tests {
-		if int(tt.a) != tt.b {
-			t.Errorf("Incorrect validator set delta flags. Wanted: %d, Got: %d", int(tt.a), tt.b)
-		}
+}
+
+func TestProposerLockupLength(t *testing.T) {
+	if DefaultConfig.ProposerLockupLength != 48 {
+		t.Errorf("Shard count incorrect. Wanted %d, got %d", 48, DefaultConfig.ProposerLockupLength)
+	}
+}
+
+func TestNotaryCommitteeSize(t *testing.T) {
+	if DefaultConfig.NotaryCommitteeSize != 135 {
+		t.Errorf("Shard count incorrect. Wanted %d, got %d", 135, DefaultConfig.NotaryCommitteeSize)
+	}
+}
+
+func TestNotaryQuorumSize(t *testing.T) {
+	if DefaultConfig.NotaryQuorumSize != 90 {
+		t.Errorf("Shard count incorrect. Wanted %d, got %d", 90, DefaultConfig.NotaryQuorumSize)
+	}
+}
+
+func TestNotaryChallengePeriod(t *testing.T) {
+	if DefaultConfig.NotaryChallengePeriod != 25 {
+		t.Errorf("Shard count incorrect. Wanted %d, got %d", 25, DefaultConfig.NotaryChallengePeriod)
 	}
 }

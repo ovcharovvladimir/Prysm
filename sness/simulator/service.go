@@ -1,208 +1,131 @@
-// Package simulator defines the simulation utility to test the sness.
 package simulator
 
 import (
 	"context"
-
+	"crypto/rand"
+	"math/big"
+	mrand "math/rand"
 	"time"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/mattn/go-colorable"
-
-	pb "github.com/ovcharovvladimir/Prysm/proto/beacon/p2p/v1"
-	"github.com/ovcharovvladimir/Prysm/shared/event"
-	"github.com/ovcharovvladimir/Prysm/shared/p2p"
-	"github.com/ovcharovvladimir/Prysm/shared/slotticker"
+	"github.com/ovcharovvladimir/essentiaHybrid/event"
+	"github.com/ovcharovvladimir/Prysm/sness/mainchain"
 	"github.com/ovcharovvladimir/Prysm/sness/params"
-	"github.com/ovcharovvladimir/Prysm/sness/types"
-	"github.com/ovcharovvladimir/essentiaHybrid/common"
-	"github.com/ovcharovvladimir/essentiaHybrid/log"
+	"github.com/ovcharovvladimir/Prysm/sness/syncer"
+	"github.com/ovcharovvladimir/Prysm/shared/p2p"
+
+	pb "github.com/ovcharovvladimir/Prysm/proto/sharding/v1"
+	"github.com/sirupsen/logrus"
 )
 
-type p2pAPI interface {
-	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
-	Send(msg proto.Message, peer p2p.Peer)
-	Broadcast(msg proto.Message)
-}
+var log = logrus.WithField("prefix", "simulator")
 
-type powChainService interface {
-	LatestBlockHash() common.Hash
-}
-
-// Simulator struct.
+// Simulator is a service in a shard node that simulates requests from
+// remote notes coming over the shardp2p network. For example, if
+// we are running a proposer service, we would want to simulate voter requests
+// requests coming to us via a p2p feed. This service will be removed
+// once p2p internals and end-to-end testing across remote
+// nodes have been implemented.
 type Simulator struct {
-	ctx              context.Context
-	cancel           context.CancelFunc
-	p2p              p2pAPI
-	web3Service      powChainService
-	beaconDB         beaconDB
-	enablePOWChain   bool
-	blockRequestChan chan p2p.Message
+	config      *params.Config
+	client      *mainchain.VRCClient
+	p2p         *p2p.Server
+	shardID     int
+	ctx         context.Context
+	cancel      context.CancelFunc
+	delay       time.Duration
+	requestFeed *event.Feed
 }
 
-// Config options for the simulator service.
-type Config struct {
-	BlockRequestBuf int
-	P2P             p2pAPI
-	Web3Service     powChainService
-	BeaconDB        beaconDB
-	EnablePOWChain  bool
+// NewSimulator creates a struct instance of a simulator service.
+// It will have access to config, a mainchain client, a p2p server,
+// and a shardID.
+func NewSimulator(config *params.Config, client *mainchain.VRCClient, p2p *p2p.Server, shardID int, delay time.Duration) (*Simulator, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	return &Simulator{config, client, p2p, shardID, ctx, cancel, delay, nil}, nil
 }
 
-type beaconDB interface {
-	GetChainHead() (*types.Block, error)
-	GetGenesisTime() (time.Time, error)
-	GetActiveState() (*types.ActiveState, error)
-	GetCrystallizedState() (*types.CrystallizedState, error)
+// Start the main loop for simulating p2p requests.
+func (s *Simulator) Start() {
+	log.Info("Starting simulator service")
+	s.requestFeed = s.p2p.Feed(pb.CollationBodyRequest{})
+
+	go s.broadcastTransactions(time.NewTicker(s.delay).C, s.ctx.Done())
+	go s.simulateNotaryRequests(s.client.VRCCaller(), s.client.ChainReader(), time.NewTicker(s.delay).C, s.ctx.Done())
 }
 
-// DefaultConfig options for the simulator.
-func DefaultConfig() *Config {
-	return &Config{
-		BlockRequestBuf: 100,
-	}
-}
-
-// NewSimulator creates a simulator instance for a syncer to consume fake, generated blocks.
-func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
-	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(3), log.StreamHandler(colorable.NewColorableStdout(), log.TerminalFormat(true))))
-
-	ctx, cancel := context.WithCancel(ctx)
-	return &Simulator{
-		ctx:              ctx,
-		cancel:           cancel,
-		p2p:              cfg.P2P,
-		web3Service:      cfg.Web3Service,
-		beaconDB:         cfg.BeaconDB,
-		enablePOWChain:   cfg.EnablePOWChain,
-		blockRequestChan: make(chan p2p.Message, cfg.BlockRequestBuf),
-	}
-}
-
-// Start the sim.
-func (sim *Simulator) Start() {
-	log.Info("Starting service")
-	genesisTime, err := sim.beaconDB.GetGenesisTime()
-	if err != nil {
-		log.Crit(err.Error())
-		return
-	}
-
-	slotTicker := slotticker.GetSlotTicker(genesisTime, params.GetConfig().SlotDuration)
-	go func() {
-		sim.run(slotTicker.C(), sim.blockRequestChan)
-		close(sim.blockRequestChan)
-		slotTicker.Done()
-	}()
-}
-
-// Stop the sim.
-func (sim *Simulator) Stop() error {
-	defer sim.cancel()
-	log.Info("Stopping service")
+// Stop the main loop for simulator requests.
+func (s *Simulator) Stop() error {
+	// Triggers a cancel call in the service's context which shuts down every goroutine
+	// in this service.
+	defer s.cancel()
+	log.Info("Stopping simulator service")
 	return nil
 }
 
-func (sim *Simulator) run(slotInterval <-chan uint64, requestChan <-chan p2p.Message) {
-	blockReqSub := sim.p2p.Subscribe(&pb.BeaconBlockRequest{}, sim.blockRequestChan)
-	defer blockReqSub.Unsubscribe()
-
-	lastBlock, err := sim.beaconDB.GetChainHead()
-	if err != nil {
-		log.Error("Could not fetch latest block", "err", err)
-		return
-	}
-
-	lastHash, err := lastBlock.Hash()
-	if err != nil {
-		log.Error("Could not get hash of the latest block", "err", err.Error())
-	}
-	broadcastedBlocks := map[[32]byte]*types.Block{}
-
+// simulateNotaryRequests simulates
+// requests for collation bodies that will be relayed to the appropriate proposer
+// by the p2p feed layer.
+func (s *Simulator) simulateNotaryRequests(fetcher mainchain.RecordFetcher, reader mainchain.Reader, delayChan <-chan time.Time, done <-chan struct{}) {
 	for {
 		select {
-		case <-sim.ctx.Done():
+		// Makes sure to close this goroutine when the service stops.
+		case <-done:
 			log.Debug("Simulator context closed, exiting goroutine")
 			return
-		case slot := <-slotInterval:
-			aState, err := sim.beaconDB.GetActiveState()
+		case <-delayChan:
+			blockNumber, err := reader.BlockByNumber(s.ctx, nil)
 			if err != nil {
-				log.Error("Failed to get active state", "err", err.Error())
-				continue
-			}
-			cState, err := sim.beaconDB.GetCrystallizedState()
-			if err != nil {
-				log.Error("Failed to get crystallized state", "err", err.Error())
+				log.Errorf("Could not fetch current block number: %v", err)
 				continue
 			}
 
-			aStateHash, err := aState.Hash()
+			period := new(big.Int).Div(blockNumber.Number(), big.NewInt(s.config.PeriodLength))
+			// Collation for current period may not exist yet, so let's ask for
+			// the collation at period - 1.
+			if period.Cmp(big.NewInt(0)) > 0 {
+				period = period.Sub(period, big.NewInt(1))
+			}
+			req, err := syncer.RequestCollationBody(fetcher, big.NewInt(int64(s.shardID)), period)
 			if err != nil {
-				log.Error("Failed to hash active state", "err", err.Error())
+				log.Errorf("Error constructing collation body request: %v", err)
 				continue
 			}
 
-			cStateHash, err := cState.Hash()
-			if err != nil {
-				log.Error("Failed to hash crystallized state", "err", err.Error())
-				continue
-			}
-
-			var powChainRef []byte
-			if sim.enablePOWChain {
-				powChainRef = sim.web3Service.LatestBlockHash().Bytes()
+			if req != nil {
+				s.p2p.Broadcast(req)
+				log.Debug("Sent request for collation body via a shardp2p broadcast")
 			} else {
-				powChainRef = []byte{byte(slot)}
+				log.Warn("Syncer generated nil CollationBodyRequest")
 			}
-
-			parentHash := make([]byte, 32)
-			copy(parentHash, lastHash[:])
-			block := types.NewBlock(&pb.BeaconBlock{
-				Slot:                  slot,
-				Timestamp:             ptypes.TimestampNow(),
-				PowChainRef:           powChainRef,
-				ActiveStateRoot:       aStateHash[:],
-				CrystallizedStateRoot: cStateHash[:],
-				AncestorHashes:        [][]byte{parentHash},
-				RandaoReveal:          params.GetConfig().SimulatedBlockRandao[:],
-				Attestations: []*pb.AggregatedAttestation{
-					{Slot: slot - 1, AttesterBitfield: []byte{byte(255)}},
-				},
-			})
-
-			hash, err := block.Hash()
-			if err != nil {
-				log.Error("Could not hash simulated block", "err", err.Error())
-				continue
-			}
-			sim.p2p.Broadcast(&pb.BeaconBlockHashAnnounce{
-				Hash: hash[:],
-			})
-			log.Info("Broadcast block hash", "hash", hash, "slot", slot)
-
-			broadcastedBlocks[hash] = block
-			lastHash = hash
-		case msg := <-requestChan:
-			data := msg.Data.(*pb.BeaconBlockRequest)
-			var hash [32]byte
-			copy(hash[:], data.Hash)
-
-			block := broadcastedBlocks[hash]
-			if block == nil {
-				log.Error("Requested block not found", "hash", hash)
-				continue
-			}
-			log.Info("Responding to full block request", "hash", hash)
-
-			// Sends the full block body to the requester.
-			res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: &pb.AggregatedAttestation{
-				Slot:             block.SlotNumber(),
-				AttesterBitfield: []byte{byte(255)},
-			}}
-			sim.p2p.Send(res, msg.Peer)
-
-			delete(broadcastedBlocks, hash)
 		}
+	}
+}
+
+// broadcastTransactions sends a transaction with random bytes over by a delay period,
+// this method is for testing purposes only, and will be replaced by a more functional CLI tool.
+func (s *Simulator) broadcastTransactions(delayChan <-chan time.Time, done <-chan struct{}) {
+	for {
+		select {
+		// Makes sure to close this goroutine when the service stops.
+		case <-done:
+			log.Debug("Simulator context closed, exiting goroutine")
+			return
+		case <-delayChan:
+			tx := createTestTx()
+			s.p2p.Broadcast(tx)
+			log.Debug("Transaction broadcasted")
+		}
+	}
+}
+
+// createTestTx is a helper method to generate tx with random data bytes.
+// it is used for broadcastTransactions.
+func createTestTx() *pb.Transaction {
+	data := make([]byte, 1024)
+	rand.Read(data)
+	// TODO: add more fields.
+	return &pb.Transaction{
+		Nonce: mrand.Uint64(),
+		Input: data,
 	}
 }
