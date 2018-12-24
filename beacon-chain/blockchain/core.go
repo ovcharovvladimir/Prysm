@@ -7,13 +7,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ovcharovvladimir/Prysm/beacon-chain/params"
+	"github.com/ovcharovvladimir/Prysm/beacon-chain/powchain"
+	"github.com/ovcharovvladimir/Prysm/beacon-chain/types"
+	"github.com/ovcharovvladimir/Prysm/beacon-chain/utils"
 	"github.com/ovcharovvladimir/essentiaHybrid/common"
 	"github.com/ovcharovvladimir/essentiaHybrid/essdb"
 	"github.com/ovcharovvladimir/essentiaHybrid/rlp"
-	"github.com/ovcharovvladimir/Prysm/sness/params"
-	"github.com/ovcharovvladimir/Prysm/sness/powchain"
-	"github.com/ovcharovvladimir/Prysm/sness/types"
-	"github.com/ovcharovvladimir/Prysm/sness/utils"
 	"github.com/sirupsen/logrus"
 )
 

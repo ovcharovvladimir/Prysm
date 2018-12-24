@@ -23,4 +23,19 @@ var (
 		Name:  "shardid",
 		Usage: `use the --shardid to determine which shard to start p2p server, listen for incoming transactions and perform proposer/observer duties`,
 	}
+
+	VrcContractFlag = cli.StringFlag{
+		Name:  "vrcaddr",
+		Usage: "use --vrcaddr to set vrc contract address",
+	}
+
+	PubKeyFlag = cli.StringFlag{
+		Name:  "pkey",
+		Usage: "use --pkey to set voter publik key",
+	}
+
+	Web3ProviderFlag = cli.StringFlag{
+		Name:  "rpc",
+		Usage: "use --rpc to set we3 rpc address",
+	}
 )

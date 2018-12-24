@@ -3,9 +3,9 @@ package blockchain
 import (
 	"context"
 
-	"github.com/ovcharovvladimir/Prysm/sness/database"
-	"github.com/ovcharovvladimir/Prysm/sness/powchain"
-	"github.com/ovcharovvladimir/Prysm/sness/types"
+	"github.com/ovcharovvladimir/Prysm/beacon-chain/database"
+	"github.com/ovcharovvladimir/Prysm/beacon-chain/powchain"
+	"github.com/ovcharovvladimir/Prysm/beacon-chain/types"
 	"github.com/sirupsen/logrus"
 )
 

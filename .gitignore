@@ -10,3 +10,5 @@ bazel-*
 # Coverage outputs
 coverage.txt
 profile.out
+
+beacon-chain/beacon-chain

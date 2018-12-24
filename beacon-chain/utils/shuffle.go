@@ -3,8 +3,8 @@ package utils
 import (
 	"errors"
 
+	"github.com/ovcharovvladimir/Prysm/beacon-chain/params"
 	"github.com/ovcharovvladimir/essentiaHybrid/common"
-	"github.com/ovcharovvladimir/Prysm/sness/params"
 	"golang.org/x/crypto/blake2s"
 )
 

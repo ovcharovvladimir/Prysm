@@ -6,9 +6,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/ovcharovvladimir/Prysm/beacon-chain/powchain"
+	"github.com/ovcharovvladimir/Prysm/beacon-chan/database"
 	"github.com/ovcharovvladimir/essentiaHybrid/common"
-	"github.com/ovcharovvladimir/Prysm/sness/database"
-	"github.com/ovcharovvladimir/Prysm/sness/powchain"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
